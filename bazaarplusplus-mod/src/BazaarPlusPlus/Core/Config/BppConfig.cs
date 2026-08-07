@@ -198,7 +198,9 @@ internal sealed class BppConfig : IBppConfig
         UseFixedSupporterListConfig = config.Bind(
             "Supporters",
             "UseFixedSupporterList",
-            false,
+            // MINIMAL BUILD: default flipped to true so the supporter strip never calls out to
+            // bpp-static.bazaarplusplus.com. Keep this true to preserve the no-network guarantee.
+            true,
             "Whether supporter attribution should use the bundled fixed supporter list instead of the remote supporter list."
         );
     }

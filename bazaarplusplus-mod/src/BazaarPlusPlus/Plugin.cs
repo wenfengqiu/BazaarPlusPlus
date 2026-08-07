@@ -89,10 +89,9 @@ public class Plugin : BaseUnityPlugin
             phase = PluginInitializationPhase.Features;
             _composition.Start();
 
+            // MINIMAL BUILD: online services (ModOnlineClient, BazaarDbLinkClient) are never
+            // constructed. Both accessors stay null, which the remaining features tolerate.
             phase = PluginInitializationPhase.OnlineServices;
-            BuildOnlineServices();
-            _composition.AttachOnlineClient(_onlineClient);
-            _composition.AttachAccountLinkClient(_bazaarDbLinkClient);
 
             phase = PluginInitializationPhase.Mountables;
             _composition.Mountables.MountAll(gameObject, services);
