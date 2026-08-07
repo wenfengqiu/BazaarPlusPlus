@@ -196,7 +196,7 @@ internal static class CollectionPanelText
     /// placeholder enum member <c>EHero.Hero8</c>. Set this to the hero's in-game name; it is the
     /// single place the collection panel's hero filter reads that label from.
     /// </summary>
-    private const string Hero8DisplayName = "Hero8";
+    private const string Hero8DisplayName = "The Dragons";
 
     internal static string Hero(EHero hero) =>
         hero switch
