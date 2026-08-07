@@ -79,6 +79,7 @@
         "Jules",
         "Karnok",
         "Mak",
+        "Pygmalien",
         "Stelle",
         "Vanessa"
       ],
@@ -2036,6 +2037,62 @@
             "tagsAny": [
               "Instrument"
             ]
+          }
+        }
+      ]
+    },
+    {
+      "kind": "Merchant",
+      "group": "size-specialist",
+      "order": 6,
+      "name": "Pol",
+      "availableHeroes": [
+        "Pygmalien"
+      ],
+      "description": "Sells Large items",
+      "portraitTemplateId": "bdf0a9ab-8bc2-4f1b-8f7d-614293ac2db2",
+      "sourceTemplateIds": [
+        "bdf0a9ab-8bc2-4f1b-8f7d-614293ac2db2"
+      ],
+      "offerSegments": [
+        {
+          "key": "normal",
+          "kind": "Normal",
+          "rule": {
+            "heroMode": "SelectedHero",
+            "sizesAny": [
+              "Large"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "kind": "Merchant",
+      "group": "other-hero",
+      "order": 8,
+      "name": "The Dragons",
+      "availableHeroes": [
+        "Dooley",
+        "Jules",
+        "Karnok",
+        "Mak",
+        "Pygmalien",
+        "Stelle",
+        "Vanessa"
+      ],
+      "description": "Sells items from this Hero",
+      "portraitTemplateId": "85cdd52b-12c2-4b64-b308-a5788f791b81",
+      "sourceTemplateIds": [
+        "85cdd52b-12c2-4b64-b308-a5788f791b81"
+      ],
+      "offerSegments": [
+        {
+          "key": "normal",
+          "kind": "Normal",
+          "rule": {
+            "heroMode": "FixedHero",
+            "hero": "Hero8"
           }
         }
       ]
