@@ -1,6 +1,6 @@
 # resume.md
 
-Working notes for a private fork of BazaarPlusPlus. Last updated 2026-08-07.
+Working notes for a private fork of BazaarPlusPlus. Last updated 2026-08-07 (no-network verified).
 
 ## Goal
 
@@ -16,8 +16,9 @@ locally is the fix, and it also allows removing telemetry that has no opt-out.
 
 ## Current state
 
-Branch **`minimal-merchant-browser`** (7 commits ahead of `master`), everything builds
-clean at 0 errors / 0 warnings, and it is installed and working in-game.
+Branch **`minimal-merchant-browser`**, ahead of `master` by the seven code commits below
+plus this document. Everything builds clean at 0 errors / 0 warnings, it is installed and
+working in-game, and the no-network goal is verified (see below).
 
 ```
 d1142bd fix(collection): add the missing Instrument type filter
@@ -72,8 +73,8 @@ only local UI — `RunBundleUploadStore.cs:395` sent the real name.
 
 > ⚠️ **Config gotcha:** BepInEx never overwrites existing values in
 > `BepInEx/config/BazaarPlusPlus.cfg`. The file was first written with the old defaults,
-> so `UseFixedSupporterList = false` persists and the supporter strip still calls
-> `bpp-static.bazaarplusplus.com`. Set it to `true` or delete the file. **Not yet done.**
+> so a changed default in `BppConfig.cs` does *not* reach an existing install. Fixed by
+> hand on 2026-08-07 (`UseFixedSupporterList = true`); re-check after any config reset.
 
 ### 2. Season 15 hero support (`84c5f67`, `f5966ff`, `5b4e436`)
 
@@ -133,15 +134,48 @@ Verified idempotent.
 7. `run.sh` needs Git Bash on Windows; the Bash tool's PowerShell-style here-strings
    (`@'...'@`) are a parse error in bash.
 
+## Verification: no-network confirmed (2026-08-07)
+
+Ran a completed run on The Dragons with all six first-party hosts pointed at `127.0.0.1`
+and a freshly deleted `LogOutput.log`. **Result: nothing was ever sent, and nothing tried.**
+
+The proof is in `BazaarPlusPlusV4/bazaarplusplus.db`, not the log:
+
+```
+runs:            status=completed, completed=1, hero=Hero8
+run_sync_state:  dirty=1
+                 uploaded_seq / uploaded_status  = NULL
+                 last_attempt_at_utc             = NULL   <- never attempted
+                 retry_count = 0, last_error     = NULL
+battles:         replay_last_uploaded_at_utc = NULL, last_synced_at_utc = NULL
+bazaardb_snapshot_uploads: 0 rows
+```
+
+The run was recorded locally and queued (`dirty=1`), but no attempt was made. This is the
+distinguishing signal: had the pump been alive and merely *blocked*, `RunBundleUploadService`
+would have called `MarkRunUploadFailed(runId, attemptedAtUtc, error)`, populating
+`last_attempt_at_utc`, `retry_count` and `last_error`. All three are untouched, so the code
+path never executed. That is positive evidence, not absence of evidence. The log agreed:
+40 lines, no connection errors, no upload events, no HTTP.
+
+**Dead end, do not repeat:** checking `Get-DnsClientCache` for these domains proves nothing
+once the hosts entries exist. Windows preloads hosts-file entries into the resolver cache on
+`ipconfig /flushdns`, so all six show up with `127.0.0.1` whether or not anything looked them
+up. Use the database bookkeeping instead.
+
+Restore the hosts file afterwards from `%USERPROFILE%\Documents\hosts.bak-bpp`.
+
 ## Open items
 
-- [ ] **Fix `UseFixedSupporterList = false`** in `BepInEx/config/BazaarPlusPlus.cfg` — the
-      last live network call. Edit to `true` or delete the file.
-- [ ] **Verify no-network empirically.** Point the four `*.bazaarplusplus.com` hosts at
-      `127.0.0.1` in `hosts`, play a run, check `BepInEx/LogOutput.log` for connection
-      errors. Silence = confirmed. This tests behaviour rather than code reading.
 - [ ] **27 reported rule drifts** from the sync script — genuine editorial divergence, not
       bugs, but worth a read-through.
+- [ ] **`RandomHeroSkinPool` throws for The Dragons.** Surfaced during the verification run:
+      `lobby.collectible_pool.degraded` / `ArgumentException: "Random hero skin pool requires
+      at least one skin."` The `hero_skin` collectibles table has zero entries for Hero8 — its
+      skin assets exist in Addressables but are not registered yet — and
+      `RandomHeroSkinPoolStateFactory.Create` assumes every hero has at least one. Caught and
+      logged, so the random-skin feature just no-ops. Upstream bug, not ours; guard it if the
+      warning is annoying.
 - [ ] Confirm Uitar Center's inferred rule (`tagsAny: ["Instrument"]`) matches what it
       actually offers in game.
 - [ ] Optional: rebase onto upstream when the public repo catches up to 5.x.
