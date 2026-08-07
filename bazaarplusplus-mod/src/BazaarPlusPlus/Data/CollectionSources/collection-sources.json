@@ -75,6 +75,7 @@
       "name": "Aimbot",
       "availableHeroes": [
         "Dooley",
+        "Hero8",
         "Jules",
         "Karnok",
         "Mak",
@@ -281,6 +282,7 @@
       "order": 1,
       "name": "Dooley",
       "availableHeroes": [
+        "Hero8",
         "Jules",
         "Karnok",
         "Mak",
@@ -585,6 +587,7 @@
       "name": "Jules",
       "availableHeroes": [
         "Dooley",
+        "Hero8",
         "Karnok",
         "Mak",
         "Pygmalien",
@@ -613,13 +616,14 @@
       "order": 7,
       "name": "Stickybeans",
       "availableHeroes": [
-        "Vanessa",
         "Dooley",
-        "Pygmalien",
+        "Hero8",
+        "Jules",
         "Karnok",
         "Mak",
+        "Pygmalien",
         "Stelle",
-        "Jules"
+        "Vanessa"
       ],
       "description": "Sells items from other Heroes",
       "portraitTemplateId": "d0276b47-be8a-4bbc-ab55-9f92b352480a",
@@ -643,6 +647,7 @@
       "name": "Karnok",
       "availableHeroes": [
         "Dooley",
+        "Hero8",
         "Jules",
         "Mak",
         "Pygmalien",
@@ -672,6 +677,7 @@
       "name": "Kev's Armory",
       "availableHeroes": [
         "Dooley",
+        "Hero8",
         "Jules",
         "Karnok",
         "Pygmalien",
@@ -816,6 +822,7 @@
       "name": "Mak",
       "availableHeroes": [
         "Dooley",
+        "Hero8",
         "Jules",
         "Karnok",
         "Pygmalien",
@@ -1061,6 +1068,7 @@
       "name": "Pygmalien",
       "availableHeroes": [
         "Dooley",
+        "Hero8",
         "Jules",
         "Karnok",
         "Mak",
@@ -1137,6 +1145,7 @@
       "order": 3,
       "name": "Shelter Shelby",
       "availableHeroes": [
+        "Hero8",
         "Karnok",
         "Vanessa"
       ],
@@ -1191,6 +1200,7 @@
       "name": "Stelle",
       "availableHeroes": [
         "Dooley",
+        "Hero8",
         "Jules",
         "Karnok",
         "Mak",
@@ -1268,6 +1278,7 @@
       "name": "The Tester",
       "availableHeroes": [
         "Dooley",
+        "Hero8",
         "Stelle"
       ],
       "description": "Sells your Hero's Tech items",
@@ -1321,6 +1332,7 @@
       "name": "Tok's Clocks",
       "availableHeroes": [
         "Dooley",
+        "Hero8",
         "Jules",
         "Karnok",
         "Mak",
@@ -1375,6 +1387,7 @@
       "name": "Vanessa",
       "availableHeroes": [
         "Dooley",
+        "Hero8",
         "Jules",
         "Karnok",
         "Mak",
@@ -1536,6 +1549,7 @@
       "name": "Fortis",
       "availableHeroes": [
         "Dooley",
+        "Hero8",
         "Jules",
         "Karnok",
         "Pygmalien",
@@ -1591,6 +1605,7 @@
       "name": "Malafang",
       "availableHeroes": [
         "Dooley",
+        "Hero8",
         "Jules",
         "Karnok",
         "Mak",
@@ -1798,6 +1813,7 @@
       "order": 14,
       "name": "Regenald",
       "availableHeroes": [
+        "Hero8",
         "Jules",
         "Karnok",
         "Mak",
@@ -1858,6 +1874,7 @@
       "name": "Slohmor Lumbra",
       "availableHeroes": [
         "Dooley",
+        "Hero8",
         "Jules",
         "Karnok",
         "Mak",
@@ -1914,6 +1931,7 @@
       "name": "Vermir",
       "availableHeroes": [
         "Dooley",
+        "Hero8",
         "Jules",
         "Karnok",
         "Mak",
@@ -1945,6 +1963,7 @@
       "name": "Zara",
       "availableHeroes": [
         "Dooley",
+        "Hero8",
         "Jules",
         "Karnok",
         "Mak",
@@ -1991,6 +2010,32 @@
           "rule": {
             "heroMode": "FixedHero",
             "hero": "Mak"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "Merchant",
+      "group": "tag-type-specialist",
+      "order": 19,
+      "name": "Uitar Center",
+      "availableHeroes": [
+        "Hero8"
+      ],
+      "description": "Sells Instruments",
+      "portraitTemplateId": "c5a68a92-9932-40bd-a45f-e1c902807814",
+      "sourceTemplateIds": [
+        "c5a68a92-9932-40bd-a45f-e1c902807814"
+      ],
+      "offerSegments": [
+        {
+          "key": "normal",
+          "kind": "Normal",
+          "rule": {
+            "heroMode": "SelectedHero",
+            "tagsAny": [
+              "Instrument"
+            ]
           }
         }
       ]
