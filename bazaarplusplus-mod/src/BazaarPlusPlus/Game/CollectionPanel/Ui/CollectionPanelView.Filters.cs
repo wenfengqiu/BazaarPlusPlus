@@ -33,8 +33,9 @@ internal sealed partial class CollectionPanelView
         {
             var hero = heroes[i];
             var chip = CreateHeroChipButton(hero, () => _commands.ToggleHero(hero));
-            chip.style.marginRight =
-                i % Sizes.HeroChipsPerRow == Sizes.HeroChipsPerRow - 1 ? 0f : UiSpacing.Sm;
+            // The row never wraps, so only the final chip drops its gap. Keying this off
+            // HeroChipsPerRow instead left a trailing gap once the roster outgrew that count.
+            chip.style.marginRight = i == heroes.Count - 1 ? 0f : UiSpacing.Sm;
             _heroChips[hero] = chip;
             _heroChipRow.Add(chip);
         }
@@ -290,6 +291,9 @@ internal sealed partial class CollectionPanelView
 
         _heroChips.Clear();
         _heroChipIcons.Clear();
+        // Chip size depends on how many chips are in the row, so a rebuild has to re-measure.
+        // Without this the cache could match the previous box and leave new chips unsized.
+        _appliedHeroChipBox = -1f;
     }
 
     private void ClearSourceChipRow()
@@ -321,7 +325,12 @@ internal sealed partial class CollectionPanelView
 
     private void ApplyHeroChipSizing(float rowWidth)
     {
-        var box = CalculatePortraitChipBox(rowWidth, Sizes.HeroChipsPerRow);
+        // Size to whichever is larger: the token, or the roster actually on screen. A fixed
+        // divisor sized every chip at rowWidth/8, so a ninth hero overflowed off the right
+        // edge of a non-wrapping row. Taking the max keeps the eight-hero layout untouched
+        // and only shrinks the chips once the roster grows past it.
+        var slots = Mathf.Max(Sizes.HeroChipsPerRow, _heroChips.Count);
+        var box = CalculatePortraitChipBox(rowWidth, slots);
         if (box <= 0f)
             return;
         if (Mathf.Abs(box - _appliedHeroChipBox) < 0.5f)
