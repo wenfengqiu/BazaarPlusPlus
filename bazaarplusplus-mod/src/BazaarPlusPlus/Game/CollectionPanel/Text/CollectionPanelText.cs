@@ -191,6 +191,13 @@ internal static class CollectionPanelText
     // Tag labels intentionally have no entry here: chips resolve through the game's native
     // typography (GameInterop.TagTypography.NativeTagTypography), never a mod-side dictionary.
 
+    /// <summary>
+    /// Display name for the Season 15 hero, which the game assemblies expose only as the
+    /// placeholder enum member <c>EHero.Hero8</c>. Set this to the hero's in-game name; it is the
+    /// single place the collection panel's hero filter reads that label from.
+    /// </summary>
+    private const string Hero8DisplayName = "Hero8";
+
     internal static string Hero(EHero hero) =>
         hero switch
         {
@@ -202,6 +209,11 @@ internal static class CollectionPanelText
             EHero.Jules => FormatSimple("Jules", "Jules", "Jules"),
             EHero.Karnok => FormatSimple("Karnok", "Karnok", "Karnok"),
             EHero.Stelle => FormatSimple("Stelle", "Stelle", "Stelle"),
+            EHero.Hero8 => FormatSimple(
+                Hero8DisplayName,
+                Hero8DisplayName,
+                Hero8DisplayName
+            ),
             _ => hero.ToString(),
         };
 

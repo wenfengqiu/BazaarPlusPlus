@@ -42,6 +42,9 @@ internal sealed class CollectionPanel : MonoBehaviour
         EHero.Mak,
         EHero.Stelle,
         EHero.Jules,
+        // Season 15 hero. The game exposes it only as the placeholder enum name Hero8 (internal
+        // asset prefix DRA); its cards come from live game data, so nothing else is needed here.
+        EHero.Hero8,
     };
 
     private static readonly ETier[] TierOrder = new[]

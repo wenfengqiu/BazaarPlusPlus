@@ -44,6 +44,8 @@ internal static class CollectionPanelHeroPreference
                 or EHero.Karnok
                 or EHero.Mak
                 or EHero.Stelle
-                or EHero.Jules;
+                or EHero.Jules
+                // Season 15 hero; see HeroOrder in CollectionPanel.
+                or EHero.Hero8;
     }
 }
