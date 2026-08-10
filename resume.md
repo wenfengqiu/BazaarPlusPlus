@@ -1,6 +1,6 @@
 # resume.md
 
-Working notes for a private fork of BazaarPlusPlus. Last updated 2026-08-07 (no-network verified).
+Working notes for a private fork of BazaarPlusPlus. Last updated 2026-08-09 (drift read-through).
 
 ## Goal
 
@@ -114,6 +114,58 @@ Verified idempotent.
   never appear despite 24 spawnable items. Checked the other 8 absent tags — all have
   zero spawnable items, so they correctly stay out.
 
+### 5. Drift read-through (2026-08-09)
+
+All 27 reported rule drifts resolved. The test applied was not "does the JSON differ" but
+"does the *browsed pool* differ" — expand both sides to the canonical form the resolver
+actually consumes (`CollectionSourceCatalog.cs:326` merges `hiddenTagGroupsAny` into
+`hiddenTagsAny`), then count affected cards in the live DB.
+
+**Two script bugs, 10 false drifts:**
+
+- `ConstraintTier.Tiers` is the *set* of tiers a merchant offers at (Goldie:
+  Bronze/Silver/Gold). The script took `tiers[0]`, so every tier specialist reported as
+  Bronze. Fixed to the highest-ranked tier — the sets run contiguously up from Bronze, so
+  `AtMost max` is exact. Cleared Goldie, Silvia, Orlin.
+- `ConstraintIsOnlyHero` was mapped to `NeutralOnly`. It is nothing of the kind: it carries
+  its own `Heroes` list and means "cards belonging to this hero *exclusively*" — the mentor
+  trainers. That is `FixedHero`, which for a trainer resolves through
+  `MatchesExclusiveHero` (`CollectionSourceOfferPoolResolver.cs:189`), exactly matching.
+  Cleared Cymon, Kelsa, Mr. Tuskari, Nonna, Old Zane, Uncle Odi, Zosima.
+
+All ten now re-derive identical to the catalog.
+
+**Comparison was also too literal.** Rules were compared as raw dicts, so
+`hiddenTagGroupsAny: ["Freeze"]` vs `hiddenTagsAny: ["Freeze", "FreezeReference"]` counted
+as drift even though the catalog loader merges them into one set, and Zara was reported for
+list *ordering* alone. Comparison now runs through `canonical_rule()`, which expands the
+groups and sorts every list. Cleared Bjorn, C4, Fortis, Malafang, Professor Riggle, Slohmor
+Lumbra, Vermir, Zara.
+
+**One real catalog gap:** Luxe's spawn context carries `ConstraintEnchantmentEligible` over
+all 12 enchantment types, which the catalog did not express. Added `enchantableOnly: true`.
+`IsEnchantable` is `enchantments.Count > 0` (`CollectionCardVm.From.cs:57`), and 31 of 1396
+items have no enchantments — so this was 31 items shown that Luxe never offers.
+
+**The 9 that still report are provably inert**, not merely "editorial":
+
+- 5 differ by a tag that matches **zero** cards: `HealthRegen` (Herma, Regenald),
+  `CooldownReference` (Tok's Clocks), `BuyPrice`/`SellPrice` (Prospero). Kev's Armory is
+  missing the game's `Toughness`, which hits only 3 `TCardEncounterStep` rows — and a
+  merchant segment matches `ECardType.Item` only (`...Resolver.cs:40`), so no browsable
+  card is affected either way.
+- 4 state a tier the data does not carry at all (Adira, Argenta, Curio, Luxe). These key off
+  the description, per trap 4. Not derivable; leave hand-authored.
+
+Separately, the 5 description diffs are the game's unresolved placeholders (`{aura.3}`,
+  `{ability.0}`) against the catalog's resolved numbers — the catalog reads better. `The
+  Tester` is deliberate: "Sells your Hero's Tech items" is *more* accurate than the game's
+  "Sells Tech items", since its rule is `SelectedHero`.
+
+Net: the catalog was right about everything except Luxe. A clean run now reports **9 rule
+drifts + 5 description diffs**, all listed above — anything beyond that is new and worth
+looking at. `--write` re-verified idempotent.
+
 ## Traps (each cost real debugging time)
 
 1. **Trainer cards have an empty `Tags` array.** They ship as `"<name> (Level Up)"`
@@ -167,8 +219,8 @@ Restore the hosts file afterwards from `%USERPROFILE%\Documents\hosts.bak-bpp`.
 
 ## Open items
 
-- [ ] **27 reported rule drifts** from the sync script — genuine editorial divergence, not
-      bugs, but worth a read-through.
+- [x] **27 reported rule drifts** — read through on 2026-08-09. See below; 10 were script
+      bugs, 1 was a real catalog gap, the remaining 16 provably change nothing.
 - [ ] **`RandomHeroSkinPool` throws for The Dragons.** Surfaced during the verification run:
       `lobby.collectible_pool.degraded` / `ArgumentException: "Random hero skin pool requires
       at least one skin."` The `hero_skin` collectibles table has zero entries for Hero8 — its
