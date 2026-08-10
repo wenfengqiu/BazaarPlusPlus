@@ -1,6 +1,7 @@
 # resume.md
 
-Working notes for a private fork of BazaarPlusPlus. Last updated 2026-08-09 (drift read-through).
+Working notes for a private fork of BazaarPlusPlus. Last updated 2026-08-09 (drift
+read-through + card art exporter). **Start at [Open items](#open-items).**
 
 ## Goal
 
@@ -16,11 +17,18 @@ locally is the fix, and it also allows removing telemetry that has no opt-out.
 
 ## Current state
 
-Branch **`minimal-merchant-browser`**, ahead of `master` by the seven code commits below
-plus this document. Everything builds clean at 0 errors / 0 warnings, it is installed and
-working in-game, and the no-network goal is verified (see below).
+Branch **`minimal-merchant-browser`**, ahead of `master` by the ten code commits below
+plus this document. Everything builds clean at 0 errors / 0 warnings, and the no-network
+goal is verified (see below).
+
+> ⚠️ **The live install is one commit behind.** `6cb62be` (Luxe) changed the embedded
+> `collection-sources.json`, but it was only built to a scratch dir with `-p:GamePath`.
+> Run the elevated build below to deploy it.
 
 ```
+87f4bb9 feat(tools): add a card art exporter
+6cb62be fix(collection): restrict Luxe to enchantable items
+b631cfe fix(tools): correct three false-drift sources in the sync script
 d1142bd fix(collection): add the missing Instrument type filter
 5bd5141 fix(collection): stop the ninth hero chip overflowing the filter row
 e1e8eb0 feat(tools): add collection-sources drift sync against live game data
@@ -30,7 +38,7 @@ f5966ff feat(collection): name the Season 15 hero The Dragons
 e04b568 feat(mod): strip all network paths for a local-only merchant browser
 ```
 
-11 files, +537 / −68.
+13 files, +966 / −68.
 
 ## Environment
 
@@ -41,6 +49,9 @@ e04b568 feat(mod): strip all network paths for a local-only merchant browser
 | .NET SDK | 10.0.302 at `C:\Program Files\dotnet` (**not on PATH**; `global.json` pins 10.0.100 `latestFeature`, so SDK 8 fails — the README's ".NET 8+" is wrong) |
 | Mod version | 4.6.0 from `Directory.Build.props`; the 4.2.0 in `tauri.conf.json` is the *installer* version |
 | BepInEx | 5.4.23.5, installed, stock |
+| Unity | 6000.3.11f1 (read from `TheBazaar_Data/globalgamemanagers`; the bundles carry no version string, so UnityPy must be told) |
+| Card art | 931 Addressables bundles / 5.47 GB under `TheBazaar_Data/StreamingAssets/aa`, fully local |
+| Python | `UnityPy` 1.25.3 installed, for `scripts/export-card-art.py` only |
 
 Rebuild into the game folder (needs an **elevated** shell — writes to `Program Files`):
 
@@ -166,6 +177,66 @@ Net: the catalog was right about everything except Luxe. A clean run now reports
 drifts + 5 description diffs**, all listed above — anything beyond that is new and worth
 looking at. `--write` re-verified idempotent.
 
+### 6. Card art: how it loads, and an exporter (`87f4bb9`)
+
+**Where the images come from.** Nothing is downloaded. Each card template carries an
+`ArtKey` (a Unity asset GUID, e.g. `ef57f889…`), copied into the VM at
+`CollectionCardVm.From.cs:56`. The panel reuses the game's own `CardPreviewItem` prefab;
+`CollectionItemLoadArtPatch` prefixes its `LoadArt` for cards tagged
+`CollectionPanelOwnedMarker` and calls `Addressables.LoadAssetAsync<CardAssetDataSO>`
+(`CollectionCardArtCache.cs:73`). The SO's `cardMaterial` is cloned and assigned to
+`_cardImage.material` — the art is a **material, not a sprite**, because the card shader
+composites frame, tier gems and enchantment FX at runtime.
+
+The mod patches this because the stock `LoadArt` calls Addressables on *every* invocation
+and never releases (1146 leaked ref counts over a full scroll), and allocates a fresh
+Material per card (no uGUI batching). Hence the L2 art LRU and L3 material cache.
+
+**Verified fully offline** — relevant to the no-network goal:
+
+| Check | Result |
+|---|---|
+| URLs in `settings.json` / `catalog.bin` | 0 |
+| `RemoteLoadPath` / `ServerData` | 0 |
+| Bundle load paths | 931/931 via `{Addressables.RuntimePath}` (local) |
+| Providers | `AssetBundleProvider` / `BundledAssetProvider` |
+
+`m_DisableCatalogUpdateOnStart` is `false`, but with no remote catalog URL configured
+there is nothing to check. 931 bundles / 5.47 GB ship under `StreamingAssets/aa`.
+
+**`scripts/export-card-art.py`** exports item art to PNG by name. Needs
+`pip install UnityPy`; run with the game closed.
+
+```
+python scripts/export-card-art.py "Abducted Cow" "Amp" -o art/
+python scripts/export-card-art.py --from-file names.txt -o art/
+python scripts/export-card-art.py --all -o art/        # ~1240 files, ~2 GB
+python scripts/export-card-art.py --hero thedragons -o art/
+python scripts/export-card-art.py --list
+```
+
+It exports the material's `_MainTex`: a square 1024×1024 image, no frame or border.
+`--texture` selects another slot. First run indexes the 12 `card_*` bundles and caches
+locators to `scripts/.card-art-index.json` (gitignored); later runs take ~2.5s. Use
+`--rebuild-index` after a game patch. Measured: `--hero thedragons` wrote 110 files in
+55s, zero failures.
+
+Two things that shaped it, both worth remembering:
+
+- **The asset's own name is a dev placeholder for newer content.** The Season 15
+  instruments ship as `AMP` and `BladedBass`, not `Amp` and `Bass`, so matching on asset
+  names alone silently loses them. Resolution goes through `GameData.db` instead, joining
+  by template id — the SO's `cardGUID` field **is** the DB template id — then falling back
+  to internal name, then display name. So the names you type are the ones the browser
+  shows. Works without the DB, just less well.
+- **Coverage is 1180 / 1396 items, and the gap is real, not a bug.** 29 items have no
+  `ArtKey` at all (blank in game too); 187 are the shared-art group — every
+  `<X>'s Package`, the chibis, a few instruments — pointing at generic art that is not
+  shipped as a per-card asset. Confirmed by sweeping all 931 bundles (31s): `CardData`
+  objects exist **only** in the 12 `card_*` bundles. The script names each casualty and
+  exits non-zero rather than skipping quietly. Closing the gap would need a `catalog.bin`
+  parser to follow `ArtKey → bundle` directly — not attempted.
+
 ## Traps (each cost real debugging time)
 
 1. **Trainer cards have an empty `Tags` array.** They ship as `"<name> (Level Up)"`
@@ -177,7 +248,9 @@ looking at. `--write` re-verified idempotent.
 3. **Tutorial variants reuse a merchant's identity** but replace its rule with a fixed
    `TSpawnFilterIdList`. The rule must come from the canonical card, not `cards[0]`.
 4. **`StartingTier` is the encounter's own tier, not a filter** on what it sells (Aero is
-   Silver but sells by tag). Tier rules are not derivable; they key off the description.
+   Silver but sells by tag). Note this is *not* the same field as `ConstraintTier`, which
+   **is** a real filter and is read — see §5. Where neither exists, tier rules key off the
+   description and are not derivable.
 5. **`availableHeroes: []` means every hero**, not none (`CollectionSourceEntry.cs:65`).
 6. **Unregistering a module does not unpatch it.** `ApplyHarmonyPatches` discovers patch
    classes by reflecting over the whole assembly, so disabled features still hook the
@@ -185,6 +258,11 @@ looking at. `--write` re-verified idempotent.
    footprint is ever wanted.
 7. `run.sh` needs Git Bash on Windows; the Bash tool's PowerShell-style here-strings
    (`@'...'@`) are a parse error in bash.
+8. **A card's art asset name is not its display name.** Newer content ships dev
+   placeholders (`AMP`, `BladedBass`); the real name lives in `GameData.db`. Join on the
+   SO's `cardGUID`, which is the DB template id — see §6.
+9. **This fork has no `tests/` directory**, despite `CLAUDE.md` documenting one. Nothing
+   to run; verification is build + the scripts + in-game.
 
 ## Verification: no-network confirmed (2026-08-07)
 
@@ -219,7 +297,18 @@ Restore the hosts file afterwards from `%USERPROFILE%\Documents\hosts.bak-bpp`.
 
 ## Open items
 
-- [x] **27 reported rule drifts** — read through on 2026-08-09. See below; 10 were script
+### Next session (2026-08-10)
+
+- [ ] **Deploy the Luxe fix.** The live install predates `6cb62be`; the branch build only
+      went to a scratch dir. Needs the elevated `dotnet build` from *Environment* above.
+- [ ] **Test `scripts/export-card-art.py`** — user is trying it out. Untested so far:
+      running it on a machine without `UnityPy` (should exit 2 with the pip hint), the
+      `--game` / `--db` overrides, and a full `--all` run (~1240 files, ~2 GB).
+      Everything else in §6 was exercised and passed.
+
+### Standing
+
+- [x] **27 reported rule drifts** — read through on 2026-08-09. See §5; 10 were script
       bugs, 1 was a real catalog gap, the remaining 16 provably change nothing.
 - [ ] **`RandomHeroSkinPool` throws for The Dragons.** Surfaced during the verification run:
       `lobby.collectible_pool.degraded` / `ArgumentException: "Random hero skin pool requires
@@ -231,6 +320,9 @@ Restore the hosts file afterwards from `%USERPROFILE%\Documents\hosts.bak-bpp`.
 - [ ] Confirm Uitar Center's inferred rule (`tagsAny: ["Instrument"]`) matches what it
       actually offers in game.
 - [ ] Optional: rebase onto upstream when the public repo catches up to 5.x.
+- [ ] Optional: a `catalog.bin` parser would close the last 187 items in the art exporter
+      by following `ArtKey → bundle` directly. Only worth it if the shared/generic art
+      actually matters — see §6.
 
 ## Things deliberately not done
 
