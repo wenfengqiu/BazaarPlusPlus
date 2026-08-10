@@ -784,6 +784,7 @@
           "kind": "Normal",
           "rule": {
             "heroMode": "SelectedHero",
+            "enchantableOnly": true,
             "startingTier": {
               "mode": "AtMost",
               "tier": "Diamond"
