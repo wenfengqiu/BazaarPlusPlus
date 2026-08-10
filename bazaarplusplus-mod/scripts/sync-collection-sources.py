@@ -32,14 +32,18 @@ availableHeroes means "every hero", so it is left alone.
 
 Known limits, all found by diffing derived rules against the hand-written catalog:
 
-  * Tier rules are not derivable. A card's StartingTier is the encounter's own tier,
-    not a filter on what it sells -- Aero is Silver but sells by tag. The catalog's
-    tier specialists key off the description ("Sells Gold-tier items"), and Curio is
-    Silver on the card while the catalog says Bronze. Reported, never derived.
+  * Tier rules are only partly derivable. A ConstraintTier is a real filter and is
+    read, but a card's StartingTier is the encounter's own tier, not a filter on what
+    it sells -- Aero is Silver but sells by tag. Several tier specialists (Adira,
+    Argenta, Curio, Luxe) carry no ConstraintTier at all and key off the description
+    ("Sells Gold-tier items"), so the catalog states a tier the data does not.
+    Reported, never derived.
   * Hidden tag groups are approximate. Kev's Armory constrains Shield, Toughness,
     ShieldReference, Health and HealthReference; the catalog simplifies that to the
     Health and Shield groups and drops Toughness. Groups are emitted only when the
-    tag set decomposes exactly, so these show as drift.
+    tag set decomposes exactly, so these show as drift. Such differences are cosmetic
+    unless a divergent tag actually appears on a browsable item -- as of 2026-08-09
+    none does.
   * Discovery is tag-based and therefore incomplete. Trainers ship untagged, so a
     brand-new trainer will not be proposed automatically -- though an existing one
     still syncs correctly, because lookup goes through the catalog's source ids.
@@ -67,6 +71,13 @@ HIDDEN_TAG_GROUPS = [
 HIDDEN_TAG_GROUP_BY_TAGS = {
     frozenset({g, g + "Reference"}): g for g in HIDDEN_TAG_GROUPS
 }
+
+# Mirrors TierOrder.Rank in the mod.
+TIER_ORDER = ["Bronze", "Silver", "Gold", "Diamond", "Legendary"]
+
+
+def tier_rank(tier: str) -> int:
+    return TIER_ORDER.index(tier) if tier in TIER_ORDER else 99
 
 
 def find_database() -> Path | None:
@@ -164,11 +175,17 @@ def derive_rule(card) -> dict:
     rule: dict = {}
 
     heroes = [h for c in walk(context, "ConstraintHero", []) for h in (c.get("Heroes") or [])]
-    only_hero = walk(context, "ConstraintIsOnlyHero", [])
+    # ConstraintIsOnlyHero names the hero a card must belong to *exclusively* -- the
+    # mentor trainers (Old Zane -> Vanessa) teach only that hero's skills. It carries
+    # its own Heroes list; it is not a neutral-item constraint.
+    only_hero = [h for c in walk(context, "ConstraintIsOnlyHero", []) for h in (c.get("Heroes") or [])]
     ignore_hero = any(b.get("IgnoreHero") for b in walk(context, "TSpawnBehaviorIgnoreHero", []))
     exclude_player = bool(walk(context, "TSpawnBehaviorExcludePlayerHero", []))
 
-    if heroes == ["Common"] or only_hero:
+    if only_hero:
+        rule["heroMode"] = "FixedHero"
+        rule["hero"] = only_hero[0]
+    elif heroes == ["Common"]:
         rule["heroMode"] = "NeutralOnly"
     elif heroes:
         rule["heroMode"] = "FixedHero"
@@ -210,12 +227,35 @@ def derive_rule(card) -> dict:
 
     tiers = [t for c in walk(context, "ConstraintTier", []) for t in (c.get("Tiers") or [])]
     if tiers:
-        rule["startingTier"] = {"mode": "AtMost", "tier": tiers[0]}
+        # Tiers is the *set* the merchant offers at (Goldie: Bronze, Silver, Gold), and
+        # those sets run contiguously up from Bronze, so AtMost the highest is exact.
+        # Taking the first entry instead reports every such merchant as Bronze.
+        rule["startingTier"] = {"mode": "AtMost", "tier": max(tiers, key=tier_rank)}
 
     if walk(context, "ConstraintEnchantmentEligible", []):
         rule["enchantableOnly"] = True
 
     return rule
+
+
+def canonical_rule(rule: dict) -> dict:
+    """Reduce a rule to what the mod actually matches on, for comparison only.
+
+    CollectionSourceCatalog merges hiddenTagGroupsAny into hiddenTagsAny and the
+    resolver tests every list with an overlap check, so neither the group/tag notation
+    nor the ordering carries meaning. Comparing raw dicts reports both as drift.
+    """
+    out = dict(rule)
+    hidden = set(out.pop("hiddenTagsAny", None) or [])
+    for group in out.pop("hiddenTagGroupsAny", None) or []:
+        hidden |= {group, group + "Reference"}
+    if hidden:
+        out["hiddenTagsAny"] = sorted(hidden)
+    for key in ("tagsAny", "tagsNone", "sizesAny", "enchantmentTypesAny",
+                "enchantmentTagsAny", "enchantmentHiddenTagsAny"):
+        if out.get(key):
+            out[key] = sorted(out[key])
+    return out
 
 
 def derive_group(kind: str, rule: dict) -> str:
@@ -307,7 +347,11 @@ def main() -> int:
 
         derived = derive_rule(source)
         normal = next((s for s in entry["offerSegments"] if s["kind"] == "Normal"), None)
-        if normal and normal["rule"] != derived and len(entry["offerSegments"]) == 1:
+        if (
+            normal
+            and canonical_rule(normal["rule"]) != canonical_rule(derived)
+            and len(entry["offerSegments"]) == 1
+        ):
             warnings.append(
                 f"{entry['name']}: rule drift\n"
                 f"    catalog: {json.dumps(normal['rule'], sort_keys=True)}\n"
