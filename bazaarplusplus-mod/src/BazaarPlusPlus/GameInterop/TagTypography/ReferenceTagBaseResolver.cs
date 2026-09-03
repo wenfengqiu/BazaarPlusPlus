@@ -50,6 +50,7 @@ internal static class ReferenceTagBaseResolver
             EHiddenTag.ChilledReference => ReferenceTagBase.ForHiddenTag(EHiddenTag.Chilled),
             EHiddenTag.TempoReference => ReferenceTagBase.ForHiddenTag(EHiddenTag.Tempo),
             EHiddenTag.PotionReference => ReferenceTagBase.ForCardTag(ECardTag.Potion),
+            EHiddenTag.TechReference => ReferenceTagBase.ForCardTag(ECardTag.Tech),
             _ => default,
         };
         return baseTag.HasValue;

@@ -122,7 +122,7 @@ internal sealed class RandomHeroSkinPoolNativeController : MonoBehaviour
             return;
         }
 
-        var equipableItem = item.EquipableItem;
+        var equipableItem = item._equipableItem;
         if (
             equipableItem.hero != controller._hero
             || equipableItem.itemData.CollectionType != controller._collectionType
@@ -238,7 +238,7 @@ internal sealed class RandomHeroSkinPoolNativeController : MonoBehaviour
             if (item == null)
                 continue;
 
-            var equipableItem = item.EquipableItem;
+            var equipableItem = item._equipableItem;
             if (
                 equipableItem.hero != _hero
                 || equipableItem.itemData.CollectionType != _collectionType
@@ -267,7 +267,7 @@ internal sealed class RandomHeroSkinPoolNativeController : MonoBehaviour
     {
         if (ReferenceEquals(_activeFetchController, this))
         {
-            var equipableItem = item.EquipableItem;
+            var equipableItem = item._equipableItem;
             if (
                 equipableItem.hero == _hero
                 && equipableItem.itemData.CollectionType == _collectionType

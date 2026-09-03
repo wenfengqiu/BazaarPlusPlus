@@ -688,6 +688,7 @@
       "description": "Sells Health and Shield items",
       "portraitTemplateId": "a4fa13f8-6beb-4b6c-839b-60af167628d9",
       "sourceTemplateIds": [
+        "6f5c1ce2-19c1-4df8-bc5a-242a0f5b5189",
         "a4fa13f8-6beb-4b6c-839b-60af167628d9"
       ],
       "offerSegments": [
@@ -1040,7 +1041,7 @@
       "availableHeroes": [
         "Pygmalien"
       ],
-      "description": "Sells Economic items from any hero",
+      "description": "Sells Economic items",
       "portraitTemplateId": "bcdaa6d4-9057-4ea1-8110-a2dae217c55f",
       "sourceTemplateIds": [
         "bcdaa6d4-9057-4ea1-8110-a2dae217c55f"
@@ -1050,14 +1051,12 @@
           "key": "normal",
           "kind": "Normal",
           "rule": {
-            "heroMode": "AllHeroes",
+            "heroMode": "SelectedHero",
             "hiddenTagsAny": [
-              "EconomyReference",
               "Gold",
               "Income",
               "Value",
-              "BuyPrice",
-              "SellPrice"
+              "EconomyReference"
             ]
           }
         }
@@ -1415,7 +1414,7 @@
     {
       "kind": "Trainer",
       "group": "trainer",
-      "order": 11,
+      "order": 12,
       "name": "Adira",
       "availableHeroes": [],
       "description": "Teaches Diamond-tier Skills",
@@ -1440,7 +1439,7 @@
     {
       "kind": "Trainer",
       "group": "trainer",
-      "order": 9,
+      "order": 10,
       "name": "Argenta",
       "availableHeroes": [],
       "description": "Teaches Silver-tier Skills",
@@ -1466,7 +1465,7 @@
     {
       "kind": "Trainer",
       "group": "trainer",
-      "order": 19,
+      "order": 20,
       "name": "Bjorn",
       "availableHeroes": [
         "Dooley",
@@ -1496,7 +1495,7 @@
     {
       "kind": "Trainer",
       "group": "trainer",
-      "order": 20,
+      "order": 21,
       "name": "C4",
       "availableHeroes": [
         "Vanessa"
@@ -1547,7 +1546,7 @@
     {
       "kind": "Trainer",
       "group": "trainer",
-      "order": 13,
+      "order": 14,
       "name": "Fortis",
       "availableHeroes": [
         "Dooley",
@@ -1603,7 +1602,7 @@
     {
       "kind": "Trainer",
       "group": "trainer",
-      "order": 17,
+      "order": 18,
       "name": "Malafang",
       "availableHeroes": [
         "Dooley",
@@ -1686,6 +1685,30 @@
       "kind": "Trainer",
       "group": "trainer",
       "order": 7,
+      "name": "Mama Bear",
+      "availableHeroes": [
+        "Hero8"
+      ],
+      "description": "Teaches skills unique to The Dragons",
+      "portraitTemplateId": "386dd351-d08e-49a5-9a38-52c4e73d45b2",
+      "sourceTemplateIds": [
+        "386dd351-d08e-49a5-9a38-52c4e73d45b2"
+      ],
+      "offerSegments": [
+        {
+          "key": "normal",
+          "kind": "Normal",
+          "rule": {
+            "heroMode": "FixedHero",
+            "hero": "Hero8"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "Trainer",
+      "group": "trainer",
+      "order": 8,
       "name": "Nufu",
       "availableHeroes": [],
       "description": "Sells Skills",
@@ -1730,7 +1753,7 @@
     {
       "kind": "Trainer",
       "group": "trainer",
-      "order": 10,
+      "order": 11,
       "name": "Orlin",
       "availableHeroes": [],
       "description": "Teaches Gold-tier Skills",
@@ -1755,7 +1778,7 @@
     {
       "kind": "Trainer",
       "group": "trainer",
-      "order": 8,
+      "order": 9,
       "name": "Pip",
       "availableHeroes": [],
       "description": "Gives you 2 Gold and teaches Bronze-tier Skills",
@@ -1782,7 +1805,7 @@
     {
       "kind": "Trainer",
       "group": "trainer",
-      "order": 18,
+      "order": 19,
       "name": "Professor Riggle",
       "availableHeroes": [
         "Dooley",
@@ -1812,7 +1835,7 @@
     {
       "kind": "Trainer",
       "group": "trainer",
-      "order": 14,
+      "order": 15,
       "name": "Regenald",
       "availableHeroes": [
         "Hero8",
@@ -1848,7 +1871,7 @@
     {
       "kind": "Trainer",
       "group": "trainer",
-      "order": 12,
+      "order": 13,
       "name": "Ryukon",
       "availableHeroes": [],
       "description": "Teaches Weapon Skills",
@@ -1872,7 +1895,7 @@
     {
       "kind": "Trainer",
       "group": "trainer",
-      "order": 16,
+      "order": 17,
       "name": "Slohmor Lumbra",
       "availableHeroes": [
         "Dooley",
@@ -1929,7 +1952,7 @@
     {
       "kind": "Trainer",
       "group": "trainer",
-      "order": 21,
+      "order": 22,
       "name": "Vermir",
       "availableHeroes": [
         "Dooley",
@@ -1961,7 +1984,7 @@
     {
       "kind": "Trainer",
       "group": "trainer",
-      "order": 15,
+      "order": 16,
       "name": "Zara",
       "availableHeroes": [
         "Dooley",

@@ -32,6 +32,13 @@ internal static class CollectionKeywordWhitelist
         EHiddenTag.Gold,
         EHiddenTag.Income,
         EHiddenTag.Value,
+        // Newer status mechanics. Heated and Chilled currently reach cards only through
+        // their Reference twins -- no card carries the base tag yet -- so availability
+        // filtering hides those two chips until one ships.
+        EHiddenTag.Tempo,
+        EHiddenTag.Heated,
+        EHiddenTag.Chilled,
+        EHiddenTag.Experience,
         EHiddenTag.Multicast,
         EHiddenTag.QuestReference,
         EHiddenTag.FlyingReference,
@@ -51,6 +58,10 @@ internal static class CollectionKeywordWhitelist
         EHiddenTag.RageReference,
         EHiddenTag.EconomyReference,
         EHiddenTag.PotionReference,
+        EHiddenTag.TechReference,
+        EHiddenTag.TempoReference,
+        EHiddenTag.HeatedReference,
+        EHiddenTag.ChilledReference,
     };
 
     public static bool IsRelatedKeyword(EHiddenTag tag) =>
@@ -75,5 +86,9 @@ internal static class CollectionKeywordWhitelist
                 or EHiddenTag.AmmoReference
                 or EHiddenTag.RageReference
                 or EHiddenTag.EconomyReference
-                or EHiddenTag.PotionReference;
+                or EHiddenTag.PotionReference
+                or EHiddenTag.TechReference
+                or EHiddenTag.TempoReference
+                or EHiddenTag.HeatedReference
+                or EHiddenTag.ChilledReference;
 }

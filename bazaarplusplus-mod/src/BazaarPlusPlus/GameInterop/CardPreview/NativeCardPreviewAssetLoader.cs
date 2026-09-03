@@ -21,6 +21,15 @@ internal sealed class NativeCardPreviewAssetLoader
         typeof(AssetLoader),
         "InstantiateAssetAsyncByReference"
     );
+
+    // Reflection does not apply optional-parameter defaults, and the 2026-09-02 game
+    // patch gave this method a second one (AssetScope? scope = null). Bind the trailing
+    // arguments once from the signature so a later addition costs nothing; a parameter
+    // that carries no default leaves this null and the preview degrades instead of
+    // throwing TargetParameterCountException on every card.
+    private static readonly object?[]? InstantiateAssetArgs = BindTrailingDefaults(
+        InstantiateAssetMethod
+    );
     private static readonly FieldInfo? SmallItemAsset = AccessTools.Field(
         typeof(AssetLoader),
         "SmallCardUIAssetRef"
@@ -38,6 +47,22 @@ internal sealed class NativeCardPreviewAssetLoader
         "SkillUIAssetRef"
     );
 
+    private static object?[]? BindTrailingDefaults(MethodInfo? method)
+    {
+        var parameters = method?.GetParameters();
+        if (parameters == null || parameters.Length == 0)
+            return null;
+
+        var arguments = new object?[parameters.Length];
+        for (var i = 1; i < parameters.Length; i++)
+        {
+            if (!parameters[i].HasDefaultValue || parameters[i].DefaultValue is Missing)
+                return null;
+            arguments[i] = parameters[i].DefaultValue;
+        }
+        return arguments;
+    }
+
     internal async Task<NativeCardPreviewInstantiateOutcome> InstantiateInactiveCardAsync(
         TCardBase template,
         Transform parent,
@@ -53,7 +78,7 @@ internal sealed class NativeCardPreviewAssetLoader
         }
 
         var assetField = ResolveAssetField(template);
-        if (InstantiateAssetMethod == null || assetField == null)
+        if (InstantiateAssetMethod == null || InstantiateAssetArgs == null || assetField == null)
         {
             return Failed(template.Id, NativeCardPreviewFailureReason.ReflectionUnavailable);
         }
@@ -66,7 +91,9 @@ internal sealed class NativeCardPreviewAssetLoader
             if (assetReference == null)
                 return Failed(template.Id, NativeCardPreviewFailureReason.PreviewTypeUnavailable);
 
-            var raw = InstantiateAssetMethod.Invoke(assetLoader, new[] { assetReference });
+            var arguments = (object?[])InstantiateAssetArgs.Clone();
+            arguments[0] = assetReference;
+            var raw = InstantiateAssetMethod.Invoke(assetLoader, arguments);
             if (raw is not Task<GameObject> task)
                 return Failed(template.Id, NativeCardPreviewFailureReason.ReflectionUnavailable);
 

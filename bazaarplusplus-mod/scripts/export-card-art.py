@@ -2,7 +2,7 @@
 """Export item art from The Bazaar's local asset bundles to PNG, by item name.
 
 The collection browser never downloads art: every card's ArtKey resolves through
-Addressables to one of the ~931 .bundle files shipped under StreamingAssets/aa. This
+Addressables to one of the ~928 .bundle files shipped under StreamingAssets/aa. This
 script reads those bundles directly, with the game closed, and writes the artwork out.
 
     python scripts/export-card-art.py "Abducted Cow" "Ice Cream Truck" -o art/
@@ -18,10 +18,15 @@ non-zero exit code.
 How it works
 ------------
 Each card ships a <Name>_CardData ScriptableObject holding its identity and a reference
-to the card Material; that Material's _MainTex is the artwork -- a square 1024x1024
-texture with no frame or border, because the shader composites the frame, tier gems and
-enchantment effects at runtime from shared textures in other bundles. Pass --texture to
-pull a different slot (e.g. _EnchantmentMask).
+to the card Material; that Material's _MainTex is the artwork -- almost always a square
+1024x1024 texture with no frame or border, because the shader composites the frame, tier
+gems and enchantment effects at runtime from shared textures in other bundles. A dozen
+assets ship at another size (512x512, 532x1024, one 2048x2048); the export writes
+whatever the slot holds. Pass --texture to pull a different slot (e.g. _EnchantmentMask).
+
+The index of asset locators is cached beside this script and keyed to the installed
+build: it records aa/catalog.hash, which Addressables rewrites on every build, and
+rescans by itself once the game is patched. --rebuild-index forces that early.
 
 Names are resolved through GameData.db when it is available, because the asset's own
 name field is a dev placeholder for newer content -- the Season 15 instruments ship as
@@ -31,13 +36,16 @@ still works, but falls back to those raw asset names.
 
 Coverage
 --------
-1180 of the game's 1396 items export. Of the remainder, 29 have no ArtKey at all (they
-render blank in game too) and 187 are the shared-art group -- every "<X>'s Package",
-the chibis, and a few instruments point at generic art that is not shipped as a
-per-card asset. Those are reported individually rather than silently skipped.
+Against the 2026-09-02 build: 1197 of the game's 1408 items export. Of the remainder, 25
+have no ArtKey at all (they render blank in game too) and 186 are the shared-art group --
+every "<X>'s Package", the chibis, and a few instruments point at generic art that is not
+shipped as a per-card asset. Those are reported individually rather than silently skipped.
 
---list prints ~1237 names, more than 1180, because it also exposes art assets with no
-live catalog entry: cut cards and dev-named variants that are still in the bundles.
+--list prints 1251 names, more than 1197, because it also exposes art assets with no live
+catalog entry: cut cards and dev-named variants that are still in the bundles. A full
+--all run therefore writes 1249 files (~1.7 GB) and reports two it cannot: Octopus, whose
+_MainTex lives in a dependency bundle, and VanessasShip, whose material is not in the
+bundle its CardData sits in.
 
 Requires UnityPy (pip install UnityPy); Pillow comes with it.
 """
@@ -64,7 +72,7 @@ except ImportError:
 warnings.filterwarnings("ignore", category=UnityVersionFallbackWarning)
 
 INDEX_PATH = Path(__file__).resolve().parent / ".card-art-index.json"
-INDEX_VERSION = 2
+INDEX_VERSION = 3
 
 GAME_CANDIDATES = [
     Path(r"C:\Program Files (x86)\Steam\steamapps\common\The Bazaar"),
@@ -85,8 +93,14 @@ def normalize(name: str) -> str:
 
 
 def find_game(explicit: Path | None) -> Path:
-    for candidate in ([explicit] if explicit else []) + GAME_CANDIDATES:
-        if candidate and (candidate / "TheBazaar_Data/StreamingAssets/aa").is_dir():
+    # An explicit --game is an instruction, not a hint: silently falling back to
+    # another install would export art from a build the caller never named.
+    if explicit is not None:
+        if not (explicit / "TheBazaar_Data/StreamingAssets/aa").is_dir():
+            raise SystemExit(f"error: {explicit} is not a The Bazaar install")
+        return explicit
+    for candidate in GAME_CANDIDATES:
+        if (candidate / "TheBazaar_Data/StreamingAssets/aa").is_dir():
             return candidate
     raise SystemExit(
         "error: could not locate The Bazaar; pass --game <dir>\n"
@@ -95,10 +109,23 @@ def find_game(explicit: Path | None) -> Path:
 
 
 def find_db(explicit: Path | None) -> Path | None:
-    for candidate in ([explicit] if explicit else []) + DB_CANDIDATES:
-        if candidate and candidate.is_file():
-            return candidate
-    return None
+    if explicit is not None:
+        if not explicit.is_file():
+            raise SystemExit(f"error: no database at {explicit}")
+        return explicit
+    return next((c for c in DB_CANDIDATES if c.is_file()), None)
+
+
+def build_fingerprint(game: Path) -> str:
+    """Identify the installed build, so a game patch invalidates the cached index.
+
+    catalog.hash is rewritten by every Addressables build -- exactly when bundles
+    appear, vanish or move their assets; the 2026-09-02 patch took the set from 931
+    bundles to 928. Without this the cache outlives the build it describes and the
+    script exports from locators that no longer hold.
+    """
+    fingerprint = game / "TheBazaar_Data/StreamingAssets/aa/catalog.hash"
+    return fingerprint.read_text(encoding="utf-8").strip() if fingerprint.is_file() else ""
 
 
 def unity_version(game: Path) -> str:
@@ -142,18 +169,32 @@ def build_index(game: Path) -> dict:
                 # card_vanessa_assets_all -> vanessa
                 "group": bundle.name.split("_")[1],
             })
-    return {"indexVersion": INDEX_VERSION, "assets": assets}
+    return {
+        "indexVersion": INDEX_VERSION,
+        "game": str(game),
+        "catalogHash": build_fingerprint(game),
+        "assets": assets,
+    }
 
 
 def load_index(game: Path, rebuild: bool) -> list[dict]:
+    stale = None
     if INDEX_PATH.is_file() and not rebuild:
         try:
             cached = json.loads(INDEX_PATH.read_text(encoding="utf-8"))
             if cached.get("indexVersion") == INDEX_VERSION and cached.get("assets"):
-                return cached["assets"]
+                if cached.get("game") != str(game):
+                    stale = f"it was built from {cached['game']}"
+                elif cached.get("catalogHash") != build_fingerprint(game):
+                    stale = "the game has been patched since it was built"
+                else:
+                    return cached["assets"]
         except (ValueError, OSError):
             pass
-    print("building card art index (first run reads ~1.2 GB of bundles)...")
+    if stale:
+        print(f"card art index is stale ({stale}); rebuilding...")
+    else:
+        print("building card art index (first run reads ~1.2 GB of bundles)...")
     index = build_index(game)
     INDEX_PATH.write_text(json.dumps(index, indent=1), encoding="utf-8")
     print(f"indexed {len(index['assets'])} art assets -> {INDEX_PATH.name}\n")
@@ -289,7 +330,8 @@ def main() -> int:
                         help="material texture slot to export (default: _MainTex)")
     parser.add_argument("--game", type=Path, help="path to The Bazaar install")
     parser.add_argument("--db", type=Path, help="path to GameData.db")
-    parser.add_argument("--rebuild-index", action="store_true", help="rescan the bundles")
+    parser.add_argument("--rebuild-index", action="store_true",
+                        help="force a bundle rescan (a game patch triggers one anyway)")
     args = parser.parse_args()
 
     game = find_game(args.game)
