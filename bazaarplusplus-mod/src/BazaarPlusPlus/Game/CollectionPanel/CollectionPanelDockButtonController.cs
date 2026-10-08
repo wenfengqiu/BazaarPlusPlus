@@ -117,6 +117,7 @@ internal sealed class CollectionPanelDockButtonController
         if (_anchorButton == null || _dockButtonRect == null)
             return;
 
+        SyncDockCanvas();
         var available = _screenLayout.TryResolveAndApplyCollection(
             _anchorButton,
             _dockButtonRect,
@@ -125,6 +126,31 @@ internal sealed class CollectionPanelDockButtonController
         );
         SetLayoutAvailable(available);
         _layoutLogState.Observe(ToLayoutObservation(available, blockerName));
+    }
+
+    private void SyncDockCanvas()
+    {
+        var anchorCanvas = _anchorButton!.GetComponentInParent<Canvas>();
+        if (anchorCanvas == null)
+            return;
+        while (!anchorCanvas.isRootCanvas && !anchorCanvas.overrideSorting)
+        {
+            var parentCanvas = anchorCanvas.transform.parent?.GetComponentInParent<Canvas>();
+            if (parentCanvas == null)
+                break;
+            anchorCanvas = parentCanvas;
+        }
+
+        // The hero-ready background intercepts clicks below the settings bar.
+        // Give only our button a sorting boundary above its native canvas content.
+        var canvas =
+            _dockButtonRect!.GetComponent<Canvas>()
+            ?? _dockButtonRect.gameObject.AddComponent<Canvas>();
+        canvas.overrideSorting = true;
+        canvas.sortingLayerID = anchorCanvas.sortingLayerID;
+        canvas.sortingOrder = anchorCanvas.sortingOrder + 1;
+        if (_dockButtonRect.GetComponent<GraphicRaycaster>() == null)
+            _dockButtonRect.gameObject.AddComponent<GraphicRaycaster>();
     }
 
     private static CollectionPanelDockLayoutObservation ToLayoutObservation(
