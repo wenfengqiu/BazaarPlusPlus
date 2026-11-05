@@ -1,8 +1,10 @@
 # resume.md
 
-Working notes for a private fork of BazaarPlusPlus. Last updated 2026-09-02 (the
-2026-09-02 game update: a build break, the grey-card regression, a catalog sync, the
-Tempo keywords, an art index fix). **Start at [Open items](#open-items).**
+Working notes for a private fork of BazaarPlusPlus. Last updated 2026-11-04 (the
+2026-11-04 game update: card materials became Addressables references, merchants gained
+cross-hero spawn groups, a catalog sync, and an exporter rewrite on a `catalog.bin`
+parser; §9). The 2026-10-08 session is now recorded too (§8). **Start at
+[Open items](#open-items).**
 
 ## Goal
 
@@ -18,26 +20,26 @@ locally is the fix, and it also allows removing telemetry that has no opt-out.
 
 ## Current state
 
-Branch **`minimal-merchant-browser`**, ahead of `master` by the ten code commits below
-plus this document, with eight files **uncommitted** from the 2026-09-02 game update
-(seven code, plus this one — §7). Everything builds clean at 0 errors / 0 warnings
-against the patched game assemblies, and the no-network goal is verified (see below).
+Branch **`minimal-merchant-browser`**, with eight files **uncommitted** from the
+2026-11-04 game update (§9). Everything builds clean at 0 errors / 0 warnings against
+the patched game assemblies, and the no-network goal is re-verified against the new
+Addressables catalog (§9).
 
-> ✅ **The live install is current** as of 2026-09-02 19:57 — every change listed below
-> is deployed and its DLL hash matches the build output. The plugins folder turned out to
-> be writable without elevation this time, so the plain `dotnet build` deployed it. Art
-> rendering is confirmed working in game; the keyword chips are not yet eyeballed.
+> ✅ **The live install is current** as of 2026-11-04 19:44: the plugins
+> `BazaarPlusPlus.dll` hash matches `bin/Debug`. Confirmed in game by the user: card art
+> renders, merchant portraits are whole, and the 2026-09-02 keyword chips are visible.
+> The log since that launch has no `bind_degraded`, portrait or cache-cleanup failures.
 
 Uncommitted:
 
 ```
- M bazaarplusplus-mod/scripts/export-card-art.py                     index fingerprint
+ M bazaarplusplus-mod/scripts/export-card-art.py                     catalog.bin rewrite
+ M bazaarplusplus-mod/scripts/sync-collection-sources.py             base-pool derivation
  M .../BazaarPlusPlus/Data/CollectionSources/collection-sources.json catalog sync
- M .../GameInterop/CardPreview/NativeCardPreviewAssetLoader.cs       grey-card fix
- M .../Game/CollectionPanel/Data/CollectionKeywordWhitelist.cs       Tempo + tag audit
- M .../GameInterop/TagTypography/ReferenceTagBaseResolver.cs         TechReference base
- M .../Game/Lobby/RandomHeroSkinPool/RandomHeroSkinPoolNativeController.cs
- M .../Patches/Lobby/RandomHeroSkinPoolPatches.cs                    build break fix
+ M .../Game/CollectionPanel/Grid/CollectionCardArtCache.cs           grey-card fix
+ M .../Game/CollectionPanel/Grid/CollectionCardMaterialCache.cs      grey-card fix
+ M .../Patches/CollectionPanel/CollectionItemLoadArtPatch.cs         grey-card fix
+ M .../Game/CollectionPanel/Ui/CollectionPanelView.Filters.cs        portrait fragments
  M resume.md
 ```
 
@@ -45,23 +47,26 @@ Committing is the user's job here. One split that matches the branch's existing 
 one commit per file group — no hunk staging needed:
 
 ```
-fix(mod): follow the CosmeticItem.EquipableItem removal
-    RandomHeroSkinPoolNativeController.cs, RandomHeroSkinPoolPatches.cs
-fix(collection): restore card art after the 2026-09-02 patch
-    NativeCardPreviewAssetLoader.cs
-fix(collection): sync the catalog with the 2026-09-02 game update
-    collection-sources.json  (Kev's Armory, Prospero, and the Mama Bear gap)
-feat(collection): add the Tempo keywords and the missing tag references
-    CollectionKeywordWhitelist.cs, ReferenceTagBaseResolver.cs
-fix(tools): rebuild the card art index when the game is patched
+fix(collection): load card materials through their Addressables reference
+    CollectionCardArtCache.cs, CollectionCardMaterialCache.cs, CollectionItemLoadArtPatch.cs
+fix(collection): draw merchant portraits as plain textures
+    CollectionPanelView.Filters.cs
+fix(tools): derive merchant rules from the base spawn pool
+    sync-collection-sources.py
+fix(collection): sync the catalog with the 2026-11-04 game update
+    collection-sources.json  (Laurel, Vermir for Pygmalien, "related" wording)
+feat(tools): resolve card art through the Addressables catalog
     export-card-art.py
-docs: record the 2026-09-02 game update
+docs: record the 2026-10-08 and 2026-11-04 game updates
     resume.md
 ```
 
 Committed:
 
 ```
+4e724b0 fix(collection): pin CardPreviewBase.SetUp after the game added an overload
+de913aa fix(collection): restore the dock button for the new settings bar layout
+d3c991a update for season 18                       (the 2026-09-02 work, §7)
 87f4bb9 feat(tools): add a card art exporter
 6cb62be fix(collection): restrict Luxe to enchantable items
 b631cfe fix(tools): correct three false-drift sources in the sync script
@@ -74,8 +79,6 @@ f5966ff feat(collection): name the Season 15 hero The Dragons
 e04b568 feat(mod): strip all network paths for a local-only merchant browser
 ```
 
-14 files, +1301 / −68 committed; 19 files, +1649 / −94 with the working tree.
-
 ## Environment
 
 | | |
@@ -85,9 +88,11 @@ e04b568 feat(mod): strip all network paths for a local-only merchant browser
 | .NET SDK | 10.0.302 at `C:\Program Files\dotnet` (**not on PATH**; `global.json` pins 10.0.100 `latestFeature`, so SDK 8 fails — the README's ".NET 8+" is wrong) |
 | Mod version | 4.6.0 from `Directory.Build.props`; the 4.2.0 in `tauri.conf.json` is the *installer* version |
 | BepInEx | 5.4.23.5, installed, stock |
-| Unity | 6000.3.11f1 (read from `TheBazaar_Data/globalgamemanagers`; the bundles carry no version string, so UnityPy must be told) |
-| Card art | 928 Addressables bundles / 5.6 GB under `TheBazaar_Data/StreamingAssets/aa`, fully local (931 / 5.47 GB before the 2026-09-02 patch) |
+| Game build | `1.0.13082-prod-windows-x64-dae65d53` (logged at startup as `game_build=`) |
+| Unity | 6000.3.27f2 since 2026-11-04 (was 6000.3.11f1; read from `TheBazaar_Data/globalgamemanagers`; the bundles carry no version string, so UnityPy must be told) |
+| Card art | 733 Addressables bundles / 6.0 GB under `TheBazaar_Data/StreamingAssets/aa`, fully local (928 / 5.6 GB before the 2026-11-04 patch, 931 / 5.47 GB before 2026-09-02) |
 | Python | `UnityPy` 1.25.3 installed, for `scripts/export-card-art.py` only |
+| Game assembly inspection | no decompiler installed (`run.sh decompile` needs one). A Mono.Cecil dumper does the job — see §9 |
 
 Rebuild into the game folder (writes to `Program Files`, so it may need an **elevated**
 shell — on 2026-09-02 the plugins folder was writable without one):
@@ -225,9 +230,12 @@ now **8 + 5** — see §7.
 `CollectionCardVm.From.cs:56`. The panel reuses the game's own `CardPreviewItem` prefab;
 `CollectionItemLoadArtPatch` prefixes its `LoadArt` for cards tagged
 `CollectionPanelOwnedMarker` and calls `Addressables.LoadAssetAsync<CardAssetDataSO>`
-(`CollectionCardArtCache.cs:73`). The SO's `cardMaterial` is cloned and assigned to
+(`CollectionCardArtCache.cs`). The card's Material is cloned and assigned to
 `_cardImage.material` — the art is a **material, not a sprite**, because the card shader
-composites frame, tier gems and enchantment FX at runtime.
+composites frame, tier gems and enchantment FX at runtime. **Since 2026-11-04 the SO no
+longer embeds the Material** (`cardMaterial` → `cardMaterialReference`, an
+`AssetReferenceT<Material>`), so the art cache makes a second Addressables load and holds
+both handles per art key (§9).
 
 The mod patches this because the stock `LoadArt` calls Addressables on *every* invocation
 and never releases (1146 leaked ref counts over a full scroll), and allocates a fresh
@@ -278,13 +286,13 @@ Two things that shaped it, both worth remembering:
   by template id — the SO's `cardGUID` field **is** the DB template id — then falling back
   to internal name, then display name. So the names you type are the ones the browser
   shows. Works without the DB, just less well.
-- **Coverage is 1197 / 1408 items on the 2026-09-02 build, and the gap is real, not a
-  bug.** 25 items have no `ArtKey` at all (blank in game too); 186 are the shared-art
-  group — every `<X>'s Package`, the chibis, a few instruments — pointing at generic art
-  that is not shipped as a per-card asset. Confirmed by sweeping all bundles (31s):
-  `CardData` objects exist **only** in the 12 `card_*` bundles. The script names each
-  casualty and exits non-zero rather than skipping quietly. Closing the gap would need a
-  `catalog.bin` parser to follow `ArtKey → bundle` directly — not attempted.
+- **Coverage was 1197 / 1408 items on the 2026-09-02 build — and the "shared-art gap"
+  turned out to be a join bug, not missing art.** Superseded by §9: the 186 "shared-art"
+  items (every `<X>'s Package`, the chibis, a few instruments) share one `CardData`
+  between several items, and joining on the SO's single `cardGUID` reaches only one of
+  them. Joining on `ArtKey` through a `catalog.bin` parser reaches all of them; coverage
+  is now every item with a real `ArtKey` (§9). `CardData` objects do still exist **only**
+  in the 12 `card_*` bundles (swept on 2026-09-02).
 
 A full `--all` run was measured on 2026-09-02: **1249 files, ~1.7 GB, ~35 min**, exit 1
 with exactly two named failures — `Octopus` (its `_MainTex` lives in a dependency bundle)
@@ -437,6 +445,152 @@ it an upstream bug was wrong. It is caught and logged, the random-skin feature n
 nothing in the collection browser depends on it — so it stays an open item, now correctly
 attributed.
 
+### 8. The 2026-10-08 game update (`de913aa`, `4e724b0`)
+
+Recorded after the fact from the two commits; this document was not updated that day.
+
+- **Grey cards, the second time.** The update added `CardPreviewBase.SetUp(TCardBase,
+  bool, CancellationToken)` beside the four-argument overload, so the name-only
+  `AccessTools.Method` lookup in `NativeCardPreviewReflection` threw
+  `AmbiguousMatchException`. Pinned to the four-argument overload the invoke site already
+  passes. (An *added overload* is the mirror image of trap 13's added optional parameter:
+  both are invisible to the compiler and fatal to name-based reflection.)
+- **Dock button hidden.** The new settings-bar layout left no room above the gear, so the
+  planner reported `blocker=viewport`. Ported from upstream: fall back to placing *below*
+  the gear, shrink the sibling gap 18 → 8, and give the button its own sorting canvas so
+  the hero-ready background stops swallowing its clicks. The resulting
+  `dock_layout.degraded` → `recovered` pair in the log is this fallback working.
+
+### 9. The 2026-11-04 game update
+
+A full rebuild again: every managed assembly, Unity 6000.3.11f1 → **6000.3.27f2**, the
+Addressables catalog (`catalog_2026.11.04.22.12.11`), and `GameData.db`.
+
+| | before (2026-09-02) | after |
+|---|---|---|
+| Unity | 6000.3.11f1 | 6000.3.27f2 |
+| Addressables bundles | 928 / 5.6 GB | 733 / 6.0 GB (12 `card_*` bundles, unchanged) |
+| Items in `GameData.db` | 1408 | 1452 (+44); 582 skills, 561 encounter events |
+| Heroes | 8 + Common | 8 + Common — no new hero (`EHero` still ends at `Hero8`) |
+| New `EHiddenTag` / `ECardTag` with live cards | — | none the browser needs (below) |
+
+**The user launched once before this session, and the log named the break** (trap 14):
+every collection card was grey, `bind_degraded … reason_code=native_preview_runtime_failed`
+with `MissingFieldException: CardAssetDataSO.cardMaterial`. The build agreed: three
+compile errors, all that one field — the entire compile surface of the update.
+
+**Grey cards, the third time: the Material moved out of the SO.** `CardAssetDataSO` lost
+`cardMaterial` (an embedded `Material`) and gained `cardMaterialReference`, an
+`AssetReferenceT<Material>`. The Material is now its own Addressables asset. The game's
+own path (`CardPreviewItem.UpdateCardImageMaterial`, read from IL) is: load the SO, check
+`cardMaterialReference.RuntimeKeyIsValid()`, `LoadAssetAsyncByReference<Material>`,
+clone, set `shader = _cardMaterialShader`. The fix follows that:
+
+- `CollectionCardArtCache` loads the Material by the reference's `RuntimeKey` right after
+  the SO, and each cache entry now owns **both** handles, released together (Material
+  first) on eviction and dispose. Get/Acquire return a `CollectionCardArt` (SO + source
+  Material), so the refcount/LRU logic is untouched — one unit per art key, as before.
+- Loading by `RuntimeKey` rather than `reference.LoadAssetAsync()` is deliberate: an
+  `AssetReference` keeps one internal handle and throws on a second load, and the game's
+  `AssetLoader` may already hold it.
+- An invalid reference degrades exactly like a missing art key did (blank face, frame
+  drawn, logged once) — the same guard the game applies.
+- `CollectionCardMaterialCache.GetOrCreate` clones `art.SourceMaterial`; the source is
+  Addressables-owned and is never mutated or destroyed.
+
+**Confirmed in game** after the user deployed: no `bind_degraded`, card art renders.
+
+**Merchant portraits showed only their left and right edges** (seen in game after
+deploy: Aimbot cut, Jay Jay fine). No log line, because the load succeeds. Cause: **14
+portrait sprites carry a 9-slice border of 230 px left and right** (Aimbot, Gaseo,
+Stickybeans, Karnok, Private Pitchfork, Pinfeather, Shelter Shelby, The Antiquarian, The
+Tester, Kelsa, Mama Bear, Uncle Odi, Uitar Center, The Dragons; read as `m_Border` from
+the bundle), and UI Toolkit applies a sprite border to `background-image` as slicing. In
+a small chip the edge strips keep full size and the middle collapses. The other 59 have
+no border. Dead ends on the way, so they are not retried: animated portraits (none of
+the 76 is), mesh type or texture format (identical across broken and working ones), and
+mesh coverage (100% for all; an early "fragmented mesh" reading of the screenshot was
+wrong). Fix (`CollectionPanelView.Filters.cs`, `SourceChipBackground`): all 73 checkable
+portrait sprites are unpacked with `rect` = their full 1024×1024 texture, so the chip
+draws `sprite.texture` as a plain quad, with identical framing and no slicing. Anything
+not matching that shape keeps the sprite path. **Confirmed in game** by the user on
+2026-11-04: the portraits are whole.
+
+How it was found: the user's description ("only the left and right parts shown, the
+middle cut") named 9-slicing outright, where a screenshot alone had been misread. Ask for
+the symptom in words as well as a picture.
+
+**Patch targets audited — now mechanised.** With no decompiler on the machine, a small
+Mono.Cecil console tool (Cecil 0.11.4 is in the NuGet cache) read the *compiled* mod and the
+six game assemblies, so `nameof`, `typeof` and constants arrive resolved. It checks every
+`[HarmonyPatch]` target exists, is unambiguous or pinned, and that every prefix/postfix
+parameter binds by name (including `___field` injections), then scans IL for string-named
+`AccessTools.*` / `Type.GetX` lookups. Result: **64/64 patch targets resolve with all
+parameters binding; no ambiguous overloads.** The string-lookup misses were all fallback
+chains (`TypeByName("X") ?? TypeByName("TheBazaar_X")`), PTR probes (`Config.ServerOption`,
+`Receive(…, bool)`) or heuristic mis-pairings — each checked by hand against the type, all
+live. It lived in the session scratchpad and is not in the repo; recreating it is ~150 lines.
+
+**Catalog sync — the drift report exploded, and the cause was a new game mechanic.** The
+first run reported ~50 merchants as `FixedHero: Vanessa` with every tag repeated nine
+times. Not data noise: the update added **cross-hero affinity skills** — *Vanessa's
+Fence*, *Pygmalien's Client*, *Dooley's Pal*, *Mak's Confidant*, *Jules' Sous Chef*,
+*Stelle's Supplier*, *Karnok's Crush*, *The Dragons' Fan*. Own one and 47 merchants also
+stock that hero's items: each merchant got one extra spawn group per hero, carrying
+`TSpawnBehaviorIgnoreHero` and gated by a `TPrerequisiteCardCount` on that skill's id
+(usually alongside a day ≥ 2 `TPrerequisiteRun`). The script walked every group, took the
+first `ConstraintHero` it met, and concatenated the tags.
+
+Fix (`sync-collection-sources.py`): derive the rule from the **base pool** — drop any
+group with a prerequisite on owning a specific card (`TCardConditionalId`; *any*
+prerequisite, not all, because of the day gate). Run-only gates (day, etc.) still count,
+as before. That alone restored the known baseline, so the pre-existing gated groups never
+fed it. The browser keeps showing the base pool: what a merchant sells *you*, without a
+run-specific skill. Real changes after that:
+
+- **Laurel** — new Jules merchant, "Sells Heated and Chilled related items. Buys your
+  Toys at +1 value" (aura 3 is a flat +1 SellPrice on Toys; resolved by hand, per the
+  catalog's convention). Rule `SelectedHero` + `HeatedReference`/`ChilledReference`, group
+  `tag-type-specialist`, order 20 (end of group).
+- **Vermir** (Crit trainer) is now offered to Pygmalien too.
+- **27 descriptions reworded by the game** from "Sells X items" to "Sells X related
+  items" (trainers: "Teaches X related skills"). Adopted where the *only* change is the
+  word "related" — it is the text the player now sees, and it is more accurate for rules
+  that include the Reference twins. Kept hand-authored: Barkun, Midsworth, Quixel, Pip
+  (the game's are unresolved placeholders) and The Tester (§5).
+
+New baseline: **8 rule drifts + 6 description diffs** — the 8 inert drifts of §5/§7, the
+5 known description diffs, and Laurel's resolved placeholder. Anything beyond is new.
+
+**Tags: nothing to add.** Re-ran the trap-12 test (tooltip entry + at least one card).
+The only hidden tag that newly passes is `Unsellable`, on exactly one item (*Depleted
+Device*, a generated Tech item) — a sale restriction, not a mechanic anyone filters by;
+left out. Every `ECardTag` with live items is already in `PlayerFacingCardTags`.
+(Note: the `tooltips` table is **one row** whose value is the 136-key dictionary —
+`select Id from tooltips` returns the single id `tooltips`. Reading it as one row per key
+gives "2 keys" and a false alarm.)
+
+**Still fully offline.** Re-ran the §6 checks against the new catalog: 0 URLs in
+`settings.json` or `catalog.bin` (ASCII and UTF-16), no `RemoteLoadPath` / `ServerData`,
+and all 733 bundle locations resolve through `{Addressables.RuntimePath}`.
+
+**The art exporter, rebuilt on a `catalog.bin` parser.** It broke the same way (it read
+`cardMaterial`'s path id), and the honest fix needed GUID → bundle: same-folder pairing
+of `*_CardData.asset` with its `.mat` covered only 1294 of 1338. So the script now parses
+the binary Addressables catalog (ContentCatalogData v2: magic `0x0DE38942`; key table of
+(key object, location set); strings length-prefixed, or flagged `0x40000000` as leaf-first
+linked segments) — 13,334 GUID keys in ~1 s, each to (asset path, bundle). It refuses a
+catalog with another magic/version rather than guess. Two hops: `ArtKey` → CardData path,
+`cardMaterialReference` → Material bundle + path → path id via the bundle's
+`m_Container`. Index version 4; first build ~7 s.
+
+Coverage: **1429 of 1452 items** — every item with a real `ArtKey`. The rest are 20 items
+with no `ArtKey` (blank in game too) and the 3 `[… ITEM TEMPLATE]` dev cards. `--list`
+shows 1318 distinct art assets, since items sharing a CardData share one image.
+A full `--all` run on 2026-11-04 wrote **1316 files, 1.8 GB, in ~10 min** (was ~35),
+exit 1 with exactly the two known failures: `Octopus` and `VanessasShip`, whose `_MainTex`
+lives in a dependency bundle. Reading bundles works with the game running.
+
 ## Traps (each cost real debugging time)
 
 1. **Trainer cards have an empty `Tags` array.** They ship as `"<name> (Level Up)"`
@@ -484,6 +638,23 @@ attributed.
 14. **`LogOutput.log` names the failure precisely; read it before theorising.** The grey
    cards took one grep: the event, the reason code, the exception type and the exact mod
    method were all on one line. The mod's degradation logging is good — use it.
+15. **Card art breaks on every update, three different ways so far.** 2026-09-02: an
+   added optional parameter (trap 13). 2026-10-08: an added overload made a name-only
+   lookup ambiguous (§8). 2026-11-04: the embedded Material became an Addressables
+   reference (§9). After any update, the first thing to check in game is the collection
+   grid, and the first grep is `bind_degraded`.
+16. **A merchant's spawn context is not one rule.** Since 2026-11-04 most merchants carry
+   per-hero groups that open only when the player owns a cross-hero skill (§9). Any tool
+   that walks *every* constraint in the tree picks up the gated groups' heroes and tags.
+   Derive from the base pool: drop groups with a `TCardConditionalId` prerequisite.
+17. **Game updates arrive while the game is running.** Steam patches, the user launches,
+   and the running process holds `BazaarPlusPlus.dll`. Check `tasklist` before assuming
+   a build deployed, and compare the plugins DLL timestamp with `bin/Debug`.
+18. **UI Toolkit applies a sprite's border as 9-slicing.** A `background-image` set from
+   a `Sprite` with a non-zero `border` keeps the edge strips at full size and squeezes
+   the middle, while the game's uGUI ignores the border. The symptom is a portrait
+   showing only its outer edges. Check `m_Border` in the bundle first. Fix by drawing the
+   texture when the sprite spans it — see §9.
 
 ## Verification: no-network confirmed (2026-08-07)
 
@@ -518,21 +689,23 @@ Restore the hosts file afterwards from `%USERPROFILE%\Documents\hosts.bak-bpp`.
 
 ## Open items
 
-### Next session (2026-09-03)
+### Next session (after 2026-11-04)
 
-- [x] **Grey cards fixed and confirmed in game** (2026-09-02). Cause and fix in §7.
-- [ ] **Confirm the new keyword chips.** They are built and deployed but not yet seen:
-      **Tempo** in the Tags row, and **Tempo / Heated / Chilled / Tech Reference** plus
-      **Experience** in the *Related* subsection (§7). `Heated` and `Chilled` should
-      *not* appear — no card carries the base tag yet, and availability filtering hides
-      a chip with no cards.
-- [ ] **Confirm the catalog edits in the merchant list:** Mama Bear under trainers, and
-      Prospero's description now reading "Sells Economic items". Spot-check Uitar Center
-      while there (standing item below).
-- [ ] Expected `LogOutput.log` noise after all of this, all benign: the
-      `NetMessageProcessor.Receive` probe, one `native_game_fonts.degraded` immediately
-      followed by `recovered`, `dock_layout.degraded`, and the skin-pool warning below.
-      Anything else is new.
+- [x] Deploy and confirm card art in game — done 2026-11-04 (§9).
+- [x] Merchant portraits whole after the 9-slice fix — confirmed in game 2026-11-04 (§9).
+      If one is ever cut again, log that sprite's `rect` and `border`: it no longer
+      matches the full-texture shape the fix relies on.
+- [x] Keyword chips from 2026-09-02 — seen in the user's 2026-11-04 screenshot: Tempo and
+      Experience in Tags; Tempo / Heated / Chilled / Tech Related in Related; plain Heated
+      and Chilled correctly absent.
+- [x] No `collection_panel.cache.cleanup_failed` in the first post-deploy log.
+- [ ] **Confirm the catalog edits in the merchant list:** Laurel for Jules, Vermir for
+      Pygmalien, and the "related" wording. Not checked yet.
+- [ ] Mama Bear under trainers (from 2026-09-02). Not checked yet.
+- [ ] Expected `LogOutput.log` noise, all benign: the `NetMessageProcessor.Receive` probe,
+      `native_game_fonts.degraded` → `recovered`, `dock_layout.degraded` → `recovered`
+      (the §8 fallback), `combat_replay.current_recording_ui.observed` (Info), and the
+      skin-pool warning below. Anything else is new.
 
 ### Standing
 
@@ -552,9 +725,12 @@ Restore the hosts file afterwards from `%USERPROFILE%\Documents\hosts.bak-bpp`.
 - [ ] Confirm Uitar Center's inferred rule (`tagsAny: ["Instrument"]`) matches what it
       actually offers in game.
 - [ ] Optional: rebase onto upstream when the public repo catches up to 5.x.
-- [ ] Optional: a `catalog.bin` parser would close the shared-art items in the exporter by
-      following `ArtKey → bundle` directly. Only worth it if the shared/generic art
-      actually matters — see §6.
+- [x] ~~Optional: a `catalog.bin` parser to close the exporter's shared-art gap~~ — done
+      2026-11-04, forced by the Material move; coverage is every item with an `ArtKey` (§9).
+- [ ] Optional: keep the Cecil patch-target auditor (§9) in the repo, e.g. under
+      `tools/`, so the next update's audit is one command instead of a rewrite.
+- [ ] Optional: the browser could show what a merchant *additionally* sells with a
+      cross-hero affinity skill (§9). Deliberately not done — it is per-run state.
 - [ ] Optional: the drift script cannot propose a brand-new *trainer* (they ship untagged,
       trap 1), which is how Mama Bear stayed missing. A cheap guard: assert the mentor set
       — one `ConstraintIsOnlyHero` trainer per hero — covers every hero in `HeroOrder`.
@@ -571,6 +747,10 @@ Restore the hosts file afterwards from `%USERPROFILE%\Documents\hosts.bak-bpp`.
 - Hidden tags with no entry in the game's tooltip table stay out of the keyword row —
   `Package` (121 items), `SpawnMusicNote`, `Level`, `Ticket`, `Absorb*`, `JoyReference`.
   They are system markers with no player-facing name, icon or colour (§7).
+- `Unsellable` stays out of the keyword row despite a tooltip entry: one generated item
+  carries it, and it is a sale restriction, not a mechanic (§9).
+- Merchant pools exclude the cross-hero skill-gated spawn groups (§9): the browser shows
+  the base pool every player sees, not one run's extensions.
 - No `Tempo` entry in `CollectionHiddenTagGroups`: those groups exist only for
   `collection-sources.json` rules, and no catalogued merchant constrains on Tempo. The
   four `Tempo Up (Level Up)` encounters that do are level-up rewards, the family the

@@ -83,7 +83,7 @@
         "Stelle",
         "Vanessa"
       ],
-      "description": "Sells Crit items from any Hero",
+      "description": "Sells Crit related items from any Hero",
       "portraitTemplateId": "f22fd14f-7e00-40cb-9e44-a46f34d64764",
       "sourceTemplateIds": [
         "f22fd14f-7e00-40cb-9e44-a46f34d64764"
@@ -160,7 +160,7 @@
       "order": 12,
       "name": "Chronos",
       "availableHeroes": [],
-      "description": "Sells Haste items",
+      "description": "Sells Haste related items",
       "portraitTemplateId": "3346b0d5-20a0-4aa4-a7d4-b86ad0109e59",
       "sourceTemplateIds": [
         "3346b0d5-20a0-4aa4-a7d4-b86ad0109e59",
@@ -196,7 +196,7 @@
       "order": 13,
       "name": "Cobweb",
       "availableHeroes": [],
-      "description": "Sells Slow items",
+      "description": "Sells Slow related items",
       "portraitTemplateId": "b10f79af-da26-4b27-88da-3e7fea49a3b9",
       "sourceTemplateIds": [
         "b10f79af-da26-4b27-88da-3e7fea49a3b9",
@@ -234,7 +234,7 @@
       "availableHeroes": [
         "Vanessa"
       ],
-      "description": "Sells Ammo items",
+      "description": "Sells Ammo related items",
       "portraitTemplateId": "816e6ba0-8f5f-412e-9756-8e1901dd9d49",
       "sourceTemplateIds": [
         "816e6ba0-8f5f-412e-9756-8e1901dd9d49"
@@ -352,7 +352,7 @@
         "Karnok",
         "Pygmalien"
       ],
-      "description": "Sells Max Health items",
+      "description": "Sells Max Health related items",
       "portraitTemplateId": "7bd967dd-4631-4252-bdff-ee0bd5e3ddb7",
       "sourceTemplateIds": [
         "7bd967dd-4631-4252-bdff-ee0bd5e3ddb7"
@@ -376,7 +376,7 @@
       "order": 17,
       "name": "Freiya",
       "availableHeroes": [],
-      "description": "Sells Freeze items",
+      "description": "Sells Freeze related items",
       "portraitTemplateId": "c246ee53-51ea-40c1-ac2f-71435e179531",
       "sourceTemplateIds": [
         "c246ee53-51ea-40c1-ac2f-71435e179531"
@@ -487,7 +487,7 @@
       "order": 15,
       "name": "Hef",
       "availableHeroes": [],
-      "description": "Sells Burn items",
+      "description": "Sells Burn related items",
       "portraitTemplateId": "43dbd6ed-6989-4ae4-acdc-f8bfcb8a008f",
       "sourceTemplateIds": [
         "43dbd6ed-6989-4ae4-acdc-f8bfcb8a008f",
@@ -528,7 +528,7 @@
         "Mak",
         "Pygmalien"
       ],
-      "description": "Sells Heal and Regen items",
+      "description": "Sells Heal and Regen related items",
       "portraitTemplateId": "2708055d-a8be-4c2f-a8d6-574e884a254e",
       "sourceTemplateIds": [
         "2708055d-a8be-4c2f-a8d6-574e884a254e"
@@ -685,7 +685,7 @@
         "Stelle",
         "Vanessa"
       ],
-      "description": "Sells Health and Shield items",
+      "description": "Sells Health and Shield related items",
       "portraitTemplateId": "a4fa13f8-6beb-4b6c-839b-60af167628d9",
       "sourceTemplateIds": [
         "6f5c1ce2-19c1-4df8-bc5a-242a0f5b5189",
@@ -738,7 +738,7 @@
       "order": 16,
       "name": "Knightshade",
       "availableHeroes": [],
-      "description": "Sells Poison items",
+      "description": "Sells Poison related items",
       "portraitTemplateId": "2745a661-095c-44a5-bb6e-8dc76e07bda2",
       "sourceTemplateIds": [
         "2745a661-095c-44a5-bb6e-8dc76e07bda2",
@@ -909,7 +909,7 @@
       "availableHeroes": [
         "Pygmalien"
       ],
-      "description": "Sells Property items",
+      "description": "Sells Property related items",
       "portraitTemplateId": "e30d8bef-5bea-4e95-b4c2-e29e17325a82",
       "sourceTemplateIds": [
         "e30d8bef-5bea-4e95-b4c2-e29e17325a82"
@@ -935,7 +935,7 @@
       "availableHeroes": [
         "Vanessa"
       ],
-      "description": "Sells Aquatic items",
+      "description": "Sells Aquatic related items",
       "portraitTemplateId": "1a21931f-6183-4251-914b-c8f83dc58a30",
       "sourceTemplateIds": [
         "1a21931f-6183-4251-914b-c8f83dc58a30"
@@ -991,7 +991,7 @@
         "Stelle",
         "Vanessa"
       ],
-      "description": "Sells Flying items from any Hero",
+      "description": "Sells Flying related items from any Hero",
       "portraitTemplateId": "7066e72e-40b7-4104-b521-159de457f2d0",
       "sourceTemplateIds": [
         "7066e72e-40b7-4104-b521-159de457f2d0"
@@ -1041,7 +1041,7 @@
       "availableHeroes": [
         "Pygmalien"
       ],
-      "description": "Sells Economic items",
+      "description": "Sells Economic related items",
       "portraitTemplateId": "bcdaa6d4-9057-4ea1-8110-a2dae217c55f",
       "sourceTemplateIds": [
         "bcdaa6d4-9057-4ea1-8110-a2dae217c55f"
@@ -1150,7 +1150,7 @@
         "Karnok",
         "Vanessa"
       ],
-      "description": "Sells Friend items",
+      "description": "Sells Friend related items",
       "portraitTemplateId": "9459a01b-edf5-432b-81cd-1fd2cacfadad",
       "sourceTemplateIds": [
         "9459a01b-edf5-432b-81cd-1fd2cacfadad"
@@ -1308,7 +1308,7 @@
       "availableHeroes": [
         "Dooley"
       ],
-      "description": "Sells Friend items",
+      "description": "Sells Friend related items",
       "portraitTemplateId": "b1b1f445-e625-4397-b4e2-ee4feeb729fa",
       "sourceTemplateIds": [
         "b1b1f445-e625-4397-b4e2-ee4feeb729fa"
@@ -1340,7 +1340,7 @@
         "Stelle",
         "Vanessa"
       ],
-      "description": "Sells Haste, Slow and Cooldown items",
+      "description": "Sells Haste, Slow and Cooldown related items",
       "portraitTemplateId": "3e871bbb-fb25-417f-8643-cb43456c3fc7",
       "sourceTemplateIds": [
         "3e871bbb-fb25-417f-8643-cb43456c3fc7"
@@ -1473,7 +1473,7 @@
         "Mak",
         "Vanessa"
       ],
-      "description": "Teaches Freeze skills",
+      "description": "Teaches Freeze related skills",
       "portraitTemplateId": "0417372b-77dc-4040-9f29-33d709c591a5",
       "sourceTemplateIds": [
         "0417372b-77dc-4040-9f29-33d709c591a5"
@@ -1500,7 +1500,7 @@
       "availableHeroes": [
         "Vanessa"
       ],
-      "description": "Teaches Ammo skills",
+      "description": "Teaches Ammo related skills",
       "portraitTemplateId": "54e27892-1eb3-4b1d-9824-51f9fa0bf51a",
       "sourceTemplateIds": [
         "54e27892-1eb3-4b1d-9824-51f9fa0bf51a"
@@ -1556,7 +1556,7 @@
         "Pygmalien",
         "Stelle"
       ],
-      "description": "Teaches Shield skills",
+      "description": "Teaches Shield related skills",
       "portraitTemplateId": "d3a78867-fd60-4a67-b03a-4200ba58674c",
       "sourceTemplateIds": [
         "d3a78867-fd60-4a67-b03a-4200ba58674c"
@@ -1614,7 +1614,7 @@
         "Stelle",
         "Vanessa"
       ],
-      "description": "Teaches Burn skills",
+      "description": "Teaches Burn related skills",
       "portraitTemplateId": "294f81dd-eb9f-47a9-9b9c-fa9766291485",
       "sourceTemplateIds": [
         "294f81dd-eb9f-47a9-9b9c-fa9766291485"
@@ -1813,7 +1813,7 @@
         "Mak",
         "Vanessa"
       ],
-      "description": "Teaches Poison skills",
+      "description": "Teaches Poison related skills",
       "portraitTemplateId": "f1892cf4-3dcb-4d41-b137-d670f44a65f8",
       "sourceTemplateIds": [
         "f1892cf4-3dcb-4d41-b137-d670f44a65f8"
@@ -1844,7 +1844,7 @@
         "Mak",
         "Pygmalien"
       ],
-      "description": "Teaches Health, Heal and Regen skills",
+      "description": "Teaches Health, Heal and Regen related skills",
       "portraitTemplateId": "b46b862e-ba64-4e05-ad5e-b8dbc90517c9",
       "sourceTemplateIds": [
         "b46b862e-ba64-4e05-ad5e-b8dbc90517c9"
@@ -1874,7 +1874,7 @@
       "order": 13,
       "name": "Ryukon",
       "availableHeroes": [],
-      "description": "Teaches Weapon Skills",
+      "description": "Teaches Weapon related Skills",
       "portraitTemplateId": "bfe9db96-a189-4bdf-84e5-fc1743ff8569",
       "sourceTemplateIds": [
         "bfe9db96-a189-4bdf-84e5-fc1743ff8569"
@@ -1906,7 +1906,7 @@
         "Stelle",
         "Vanessa"
       ],
-      "description": "Teaches Slow skills",
+      "description": "Teaches Slow related skills",
       "portraitTemplateId": "18f8471a-3914-419a-9296-14e624e86ac6",
       "sourceTemplateIds": [
         "18f8471a-3914-419a-9296-14e624e86ac6"
@@ -1960,9 +1960,10 @@
         "Jules",
         "Karnok",
         "Mak",
+        "Pygmalien",
         "Vanessa"
       ],
-      "description": "Teaches Crit skills",
+      "description": "Teaches Crit related skills",
       "portraitTemplateId": "922b9031-c859-479c-95c4-18234a366c63",
       "sourceTemplateIds": [
         "922b9031-c859-479c-95c4-18234a366c63"
@@ -1995,7 +1996,7 @@
         "Stelle",
         "Vanessa"
       ],
-      "description": "Teaches Haste and Charge skills",
+      "description": "Teaches Haste and Charge related skills",
       "portraitTemplateId": "86907ad1-f67a-48db-ac30-e5afe2de237a",
       "sourceTemplateIds": [
         "86907ad1-f67a-48db-ac30-e5afe2de237a"
@@ -2117,6 +2118,33 @@
           "rule": {
             "heroMode": "FixedHero",
             "hero": "Hero8"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "Merchant",
+      "group": "tag-type-specialist",
+      "order": 20,
+      "name": "Laurel",
+      "availableHeroes": [
+        "Jules"
+      ],
+      "description": "Sells Heated and Chilled related items. Buys your Toys at +1 value",
+      "portraitTemplateId": "a8c54f28-4d97-49fc-8186-0ab412d3577a",
+      "sourceTemplateIds": [
+        "a8c54f28-4d97-49fc-8186-0ab412d3577a"
+      ],
+      "offerSegments": [
+        {
+          "key": "normal",
+          "kind": "Normal",
+          "rule": {
+            "heroMode": "SelectedHero",
+            "hiddenTagsAny": [
+              "HeatedReference",
+              "ChilledReference"
+            ]
           }
         }
       ]

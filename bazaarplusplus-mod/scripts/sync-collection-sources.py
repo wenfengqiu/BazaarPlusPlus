@@ -169,9 +169,45 @@ def derive_kind(card) -> str:
     return "Trainer" if "Skill" in types else "Merchant"
 
 
+def is_card_gated(group) -> bool:
+    """True for a spawn group that only opens when the player owns one specific card.
+
+    The 2026-11-04 update gave 47 merchants one extra group per hero, each carrying
+    TSpawnBehaviorIgnoreHero and gated on a cross-hero skill ("Vanessa's Fence",
+    "Pygmalien's Client", ... "The Dragons' Fan"): own the skill and the merchant also
+    stocks that hero's items. A few groups gate on an item or a run skill the same way.
+    These widen the pool for one player in one run; the browsed pool is the base pool.
+    """
+    # Any, not all: most of these also carry a day gate (TPrerequisiteRun, day >= 2).
+    return any(
+        p.get("$type") == "TPrerequisiteCardCount"
+        and ((p.get("Subject") or {}).get("Conditions") or {}).get("$type") == "TCardConditionalId"
+        for p in group.get("Prerequisites") or []
+    )
+
+
+def base_context(context):
+    """The spawn context with card-gated groups removed (see is_card_gated)."""
+    if not isinstance(context, dict) or not isinstance(context.get("Groups"), list):
+        return context
+    groups = [g for g in context["Groups"] if not is_card_gated(g)]
+    return {**context, "Groups": groups}
+
+
+def gated_hero_count(card) -> int:
+    """How many heroes' items a card-gated group can add to this source."""
+    context = (card.get("SelectionContext") or {}).get("SpawnContext") or {}
+    heroes = set()
+    for group in context.get("Groups") or []:
+        if is_card_gated(group):
+            for c in walk(group, "ConstraintHero", []):
+                heroes.update(c.get("Heroes") or [])
+    return len(heroes)
+
+
 def derive_rule(card) -> dict:
     """Translate the spawn constraint tree into a CollectionSourceOfferRule."""
-    context = (card.get("SelectionContext") or {}).get("SpawnContext")
+    context = base_context((card.get("SelectionContext") or {}).get("SpawnContext"))
     rule: dict = {}
 
     heroes = [h for c in walk(context, "ConstraintHero", []) for h in (c.get("Heroes") or [])]

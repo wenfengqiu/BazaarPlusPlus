@@ -1,6 +1,5 @@
 #nullable enable
 using BazaarPlusPlus.Infrastructure;
-using TheBazaar.Assets.Scripts.ScriptableObjectsScripts;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -39,15 +38,15 @@ internal sealed class CollectionCardMaterialCache
         _lru.Release(artKey);
     }
 
-    public Material? GetOrCreate(string artKey, CardAssetDataSO assetData, Shader? shaderOverride)
+    public Material? GetOrCreate(string artKey, CollectionCardArt? art, Shader? shaderOverride)
     {
-        if (string.IsNullOrEmpty(artKey) || assetData == null || assetData.cardMaterial == null)
+        if (string.IsNullOrEmpty(artKey) || art == null || art.SourceMaterial == null)
             return null;
 
         if (_materials.TryGetValue(artKey, out var cached) && cached != null)
             return cached;
 
-        var material = new Material(assetData.cardMaterial);
+        var material = new Material(art.SourceMaterial);
         if (shaderOverride != null)
             material.shader = shaderOverride;
         material.name = $"CollectionPanelMaterial[{artKey}]";

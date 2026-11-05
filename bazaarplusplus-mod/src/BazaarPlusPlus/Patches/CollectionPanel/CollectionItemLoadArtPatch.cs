@@ -62,10 +62,10 @@ internal static class CollectionItemLoadArtPatch
                 && string.Equals(marker.CurrentArtKey, artKey, StringComparison.Ordinal);
             var needsNewRef = !hasCurrentRef;
 
-            var assetData = needsNewRef
+            var art = needsNewRef
                 ? await cacheSession.ArtCache.Acquire(artKey)
                 : await cacheSession.ArtCache.Get(artKey);
-            acquiredNewArtRef = needsNewRef && assetData != null;
+            acquiredNewArtRef = needsNewRef && art != null;
             acquiredArtKey = acquiredNewArtRef ? artKey : null;
             if (instance == null)
             {
@@ -76,7 +76,7 @@ internal static class CollectionItemLoadArtPatch
                 }
                 return;
             }
-            if (assetData == null || assetData.cardMaterial == null)
+            if (art == null)
             {
                 if (acquiredNewArtRef)
                 {
@@ -90,7 +90,7 @@ internal static class CollectionItemLoadArtPatch
 
             var material = cacheSession.MaterialCache.GetOrCreate(
                 artKey,
-                assetData,
+                art,
                 instance._cardMaterialShader
             );
             if (material == null)

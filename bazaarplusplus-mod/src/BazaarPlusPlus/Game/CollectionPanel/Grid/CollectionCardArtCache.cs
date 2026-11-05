@@ -1,6 +1,7 @@
 #nullable enable
 using BazaarPlusPlus.Infrastructure;
 using TheBazaar.Assets.Scripts.ScriptableObjectsScripts;
+using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
 
@@ -15,6 +16,11 @@ namespace BazaarPlusPlus.Game.CollectionPanel.Grid;
 // once per artKey when the panel closes. An LRU bound caps resident SOs at a fixed number
 // regardless of catalog size; the LRU only evicts entries with refcount 0 so handles still
 // in use by active or pooled cards stay resident.
+//
+// Since the 2026-11-04 game update the SO no longer embeds its Material: `cardMaterial`
+// became `cardMaterialReference`, an AssetReferenceT<Material> that is its own Addressables
+// asset. Each entry therefore holds two handles — the SO and the Material it points at —
+// loaded and released together, so the rest of the panel still sees one unit per artKey.
 internal sealed class CollectionCardArtCache
 {
     private const int DefaultCapacity = 256;
@@ -35,9 +41,9 @@ internal sealed class CollectionCardArtCache
 
     // Returns null on load failure; the caller proceeds without a material assignment, which
     // matches the game's own behaviour for invalid art keys (blank face, frame still drawn).
-    public Task<CardAssetDataSO?> Get(string artKey) => GetCore(artKey, acquireRef: false);
+    public Task<CollectionCardArt?> Get(string artKey) => GetCore(artKey, acquireRef: false);
 
-    public Task<CardAssetDataSO?> Acquire(string artKey) => GetCore(artKey, acquireRef: true);
+    public Task<CollectionCardArt?> Acquire(string artKey) => GetCore(artKey, acquireRef: true);
 
     internal void ReportDegraded(
         CollectionPanelLogReasonCode reasonCode,
@@ -51,7 +57,7 @@ internal sealed class CollectionCardArtCache
             exception
         );
 
-    private async Task<CardAssetDataSO?> GetCore(string artKey, bool acquireRef)
+    private async Task<CollectionCardArt?> GetCore(string artKey, bool acquireRef)
     {
         if (string.IsNullOrEmpty(artKey))
             return null;
@@ -64,13 +70,72 @@ internal sealed class CollectionCardArtCache
             Touch(artKey);
             if (acquireRef)
                 existing.RefCount++;
-            return existing.Asset;
+            return existing.Art;
         }
 
-        AsyncOperationHandle<CardAssetDataSO> handle;
+        var assetHandle = await LoadOrFail<CardAssetDataSO>(artKey, artKey);
+        if (assetHandle == null)
+            return null;
+
+        // The game guards the same way (CardPreviewItem.UpdateCardImageMaterial): no valid
+        // reference means no art, which renders as a blank face with the frame still drawn.
+        var reference = assetHandle.Value.Result.cardMaterialReference;
+        if (reference == null || !reference.RuntimeKeyIsValid())
+        {
+            _logState.ReportDegraded(
+                CollectionPanelLogReasonCode.AddressablesLoadFailed,
+                CollectionCardArtStatus.ArtUnavailable,
+                artKey,
+                null
+            );
+            ReleaseQuietly(assetHandle.Value);
+            _failedKeys.Add(artKey);
+            return null;
+        }
+
+        // Load by RuntimeKey rather than reference.LoadAssetAsync(): an AssetReference keeps a
+        // single internal handle and throws on a second load, and the game's own AssetLoader
+        // may already hold that one for this SO.
+        var materialHandle = await LoadOrFail<Material>(reference.RuntimeKey, artKey);
+        if (materialHandle == null)
+        {
+            ReleaseQuietly(assetHandle.Value);
+            return null;
+        }
+
+        // A second concurrent Get could have populated the entry while we awaited.
+        if (_entries.TryGetValue(artKey, out var raced))
+        {
+            ReleaseQuietly(materialHandle.Value);
+            ReleaseQuietly(assetHandle.Value);
+            Touch(artKey);
+            if (acquireRef)
+                raced.RefCount++;
+            return raced.Art;
+        }
+
+        var art = new CollectionCardArt(assetHandle.Value.Result, materialHandle.Value.Result);
+        var node = _lru.AddFirst(artKey);
+        _nodeMap[artKey] = node;
+        _entries[artKey] = new CacheEntry(
+            assetHandle.Value,
+            materialHandle.Value,
+            art,
+            acquireRef ? 1 : 0
+        );
+        Evict();
+        return art;
+    }
+
+    // Loads one Addressables asset. On failure it logs, releases the handle, marks artKey
+    // failed and returns null, so the caller only unwinds what it already holds.
+    private async Task<AsyncOperationHandle<T>?> LoadOrFail<T>(object key, string artKey)
+        where T : UnityEngine.Object
+    {
+        AsyncOperationHandle<T> handle;
         try
         {
-            handle = Addressables.LoadAssetAsync<CardAssetDataSO>(artKey);
+            handle = Addressables.LoadAssetAsync<T>(key);
             await handle.Task;
         }
         catch (Exception ex)
@@ -85,7 +150,7 @@ internal sealed class CollectionCardArtCache
             return null;
         }
 
-        if (handle.Status != AsyncOperationStatus.Succeeded)
+        if (handle.Status != AsyncOperationStatus.Succeeded || handle.Result == null)
         {
             _logState.ReportDegraded(
                 CollectionPanelLogReasonCode.AddressablesLoadFailed,
@@ -93,40 +158,24 @@ internal sealed class CollectionCardArtCache
                 artKey,
                 null
             );
-            try
-            {
-                Addressables.Release(handle);
-            }
-            catch
-            {
-                // best-effort
-            }
+            ReleaseQuietly(handle);
             _failedKeys.Add(artKey);
             return null;
         }
 
-        // A second concurrent Get could have populated the entry while we awaited.
-        if (_entries.TryGetValue(artKey, out var raced))
-        {
-            try
-            {
-                Addressables.Release(handle);
-            }
-            catch
-            {
-                // best-effort
-            }
-            Touch(artKey);
-            if (acquireRef)
-                raced.RefCount++;
-            return raced.Asset;
-        }
+        return handle;
+    }
 
-        var node = _lru.AddFirst(artKey);
-        _nodeMap[artKey] = node;
-        _entries[artKey] = new CacheEntry(handle, handle.Result, acquireRef ? 1 : 0);
-        Evict();
-        return handle.Result;
+    private static void ReleaseQuietly<T>(AsyncOperationHandle<T> handle)
+    {
+        try
+        {
+            Addressables.Release(handle);
+        }
+        catch
+        {
+            // best-effort
+        }
     }
 
     public void AddRef(string artKey)
@@ -151,7 +200,7 @@ internal sealed class CollectionCardArtCache
         {
             try
             {
-                Addressables.Release(pair.Value.Handle);
+                pair.Value.ReleaseHandles();
             }
             catch (Exception ex)
             {
@@ -208,7 +257,7 @@ internal sealed class CollectionCardArtCache
                 _entries.Remove(evictKey);
                 try
                 {
-                    Addressables.Release(evictedEntry.Handle);
+                    evictedEntry.ReleaseHandles();
                 }
                 catch (Exception ex)
                 {
@@ -242,18 +291,50 @@ internal sealed class CollectionCardArtCache
     private sealed class CacheEntry
     {
         public CacheEntry(
-            AsyncOperationHandle<CardAssetDataSO> handle,
-            CardAssetDataSO asset,
+            AsyncOperationHandle<CardAssetDataSO> assetHandle,
+            AsyncOperationHandle<Material> materialHandle,
+            CollectionCardArt art,
             int refCount
         )
         {
-            Handle = handle;
-            Asset = asset;
+            AssetHandle = assetHandle;
+            MaterialHandle = materialHandle;
+            Art = art;
             RefCount = Math.Max(0, refCount);
         }
 
-        public AsyncOperationHandle<CardAssetDataSO> Handle { get; }
-        public CardAssetDataSO Asset { get; }
+        public AsyncOperationHandle<CardAssetDataSO> AssetHandle { get; }
+        public AsyncOperationHandle<Material> MaterialHandle { get; }
+        public CollectionCardArt Art { get; }
         public int RefCount { get; set; }
+
+        // Material first, in reverse load order. If that release throws, the SO is still
+        // released and the exception reaches the caller's cleanup logging.
+        public void ReleaseHandles()
+        {
+            try
+            {
+                Addressables.Release(MaterialHandle);
+            }
+            finally
+            {
+                Addressables.Release(AssetHandle);
+            }
+        }
     }
+}
+
+// One resolved card art: the SO and the source Material its cardMaterialReference names.
+// SourceMaterial is the Addressables-owned asset. Never mutate or destroy it; clone it, as
+// CollectionCardMaterialCache does.
+internal sealed class CollectionCardArt
+{
+    public CollectionCardArt(CardAssetDataSO asset, Material sourceMaterial)
+    {
+        Asset = asset;
+        SourceMaterial = sourceMaterial;
+    }
+
+    public CardAssetDataSO Asset { get; }
+    public Material SourceMaterial { get; }
 }

@@ -880,10 +880,34 @@ internal sealed partial class CollectionPanelView
             return;
         }
 
-        icon.style.backgroundImage = new StyleBackground(sprite);
+        icon.style.backgroundImage = SourceChipBackground(sprite);
         if (initials != null)
             initials.style.display = DisplayStyle.None;
         icon.MarkDirtyRepaint();
+    }
+
+    // Some merchant/trainer portrait sprites carry a 9-slice border (Aimbot, Karnok, The
+    // Tester, ... : 230 px left and right on a 1024 px sprite). UI Toolkit applies a
+    // sprite's border as slicing, so in a small chip the two edge strips keep full size
+    // and the middle of the portrait collapses; the game's own UI ignores the border.
+    // Every portrait sprite is unpacked and its rect is its entire texture, so the
+    // texture as a plain quad frames identically with no slicing. Anything else
+    // (atlas-packed, sub-rect) keeps the sprite path, which is correct for it.
+    private static StyleBackground SourceChipBackground(Sprite sprite)
+    {
+        var texture = sprite.texture;
+        if (texture != null && !sprite.packed)
+        {
+            var rect = sprite.rect;
+            if (
+                rect.x == 0f
+                && rect.y == 0f
+                && Mathf.Approximately(rect.width, texture.width)
+                && Mathf.Approximately(rect.height, texture.height)
+            )
+                return new StyleBackground(texture);
+        }
+        return new StyleBackground(sprite);
     }
 
     private static string GetInitials(string displayName)
