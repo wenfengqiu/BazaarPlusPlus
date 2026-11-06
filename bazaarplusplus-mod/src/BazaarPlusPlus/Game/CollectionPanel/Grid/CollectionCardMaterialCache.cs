@@ -1,5 +1,6 @@
 #nullable enable
 using BazaarPlusPlus.Infrastructure;
+using TheBazaar.Utilities.Shaders;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -49,6 +50,10 @@ internal sealed class CollectionCardMaterialCache
         var material = new Material(art.SourceMaterial);
         if (shaderOverride != null)
             material.shader = shaderOverride;
+        // Some source materials ship with the Tiny shader variant switched on (Propeller Hat
+        // and 11 others). The game's own CardPreviewItem.UpdateCardImageMaterial clears it on
+        // every clone, so a preview never draws that variant; this path has to do the same.
+        material.DisableKeyword(CardTinyShaderVariables.IsTinyKeyword);
         material.name = $"CollectionPanelMaterial[{artKey}]";
         _materials[artKey] = material;
         return material;
