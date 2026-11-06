@@ -1,10 +1,8 @@
 # resume.md
 
-Working notes for a private fork of BazaarPlusPlus. Last updated 2026-11-04 (the
-2026-11-04 game update: card materials became Addressables references, merchants gained
-cross-hero spawn groups, a catalog sync, and an exporter rewrite on a `catalog.bin`
-parser; §9). The 2026-10-08 session is now recorded too (§8). **Start at
-[Open items](#open-items).**
+Working notes for a private fork of BazaarPlusPlus. Last updated 2026-11-06 (Propeller
+Hat and 11 other cards drew in Tiny mode; §10). The 2026-11-04 game update is in §9.
+**Start at [Open items](#open-items).**
 
 ## Goal
 
@@ -20,50 +18,17 @@ locally is the fix, and it also allows removing telemetry that has no opt-out.
 
 ## Current state
 
-Branch **`minimal-merchant-browser`**, with eight files **uncommitted** from the
-2026-11-04 game update (§9). Everything builds clean at 0 errors / 0 warnings against
-the patched game assemblies, and the no-network goal is re-verified against the new
-Addressables catalog (§9).
+Branch **`minimal-merchant-browser`**, with everything committed. It builds clean at 0
+errors / 0 warnings against the current game assemblies.
 
-> ✅ **The live install is current** as of 2026-11-04 19:44: the plugins
-> `BazaarPlusPlus.dll` hash matches `bin/Debug`. Confirmed in game by the user: card art
-> renders, merchant portraits are whole, and the 2026-09-02 keyword chips are visible.
-> The log since that launch has no `bind_degraded`, portrait or cache-cleanup failures.
-
-Uncommitted:
-
-```
- M bazaarplusplus-mod/scripts/export-card-art.py                     catalog.bin rewrite
- M bazaarplusplus-mod/scripts/sync-collection-sources.py             base-pool derivation
- M .../BazaarPlusPlus/Data/CollectionSources/collection-sources.json catalog sync
- M .../Game/CollectionPanel/Grid/CollectionCardArtCache.cs           grey-card fix
- M .../Game/CollectionPanel/Grid/CollectionCardMaterialCache.cs      grey-card fix
- M .../Patches/CollectionPanel/CollectionItemLoadArtPatch.cs         grey-card fix
- M .../Game/CollectionPanel/Ui/CollectionPanelView.Filters.cs        portrait fragments
- M resume.md
-```
-
-Committing is the user's job here. One split that matches the branch's existing style,
-one commit per file group — no hunk staging needed:
-
-```
-fix(collection): load card materials through their Addressables reference
-    CollectionCardArtCache.cs, CollectionCardMaterialCache.cs, CollectionItemLoadArtPatch.cs
-fix(collection): draw merchant portraits as plain textures
-    CollectionPanelView.Filters.cs
-fix(tools): derive merchant rules from the base spawn pool
-    sync-collection-sources.py
-fix(collection): sync the catalog with the 2026-11-04 game update
-    collection-sources.json  (Laurel, Vermir for Pygmalien, "related" wording)
-feat(tools): resolve card art through the Addressables catalog
-    export-card-art.py
-docs: record the 2026-10-08 and 2026-11-04 game updates
-    resume.md
-```
+> ✅ **The live install is current** as of 2026-11-06: the plugins `BazaarPlusPlus.dll`
+> hash matches `bin/Debug`, and the user confirmed the Tiny fix (§10) in game.
 
 Committed:
 
 ```
+acaeccc fix(collection): clear the baked Tiny keyword on cached card materials
+170ce6e update for season 20                       (the 2026-11-04 work, §9)
 4e724b0 fix(collection): pin CardPreviewBase.SetUp after the game added an overload
 de913aa fix(collection): restore the dock button for the new settings bar layout
 d3c991a update for season 18                       (the 2026-09-02 work, §7)
@@ -591,6 +556,57 @@ A full `--all` run on 2026-11-04 wrote **1316 files, 1.8 GB, in ~10 min** (was ~
 exit 1 with exactly the two known failures: `Octopus` and `VanessasShip`, whose `_MainTex`
 lives in a dependency bundle. Reading bundles works with the game running.
 
+### 10. Twelve cards drew in Tiny mode (2026-11-06)
+
+**Symptom** (user, in the merchant browser): Propeller Hat's art looks like a stretched
+copy of its Tiny version.
+
+**Tiny is not a separate image here.** Propeller Hat's bundle holds one 1024×1024 `_D`
+texture. Tiny is a shader variant, switched by the `_ISTINY_ON` keyword and tuned per
+material (`_TinyScalar`, `_TinyOffsetterX/Y`, `_TinyScaling`, `_TinyEchoScale`, …), so the
+art is re-framed by the shader. Whether any other card has redrawn Tiny art was not checked.
+
+**Cause: the mod's material clone skipped a step of the game's.** 12 of 1322 card materials
+ship with `_ISTINY_ON` and `_isTiny = 1` baked in, all Medium, none with Tiny anywhere in
+their `GameData.db` card: Propeller Hat, Beach Umbrella, Dragonmelon, Worry Wart, Book of
+Secrets, Bionic Arm, Disintegration Ray, Sponsored Apparel, Display Case, Ledger, Amp,
+Cauterizing Blade. `CardPreviewItem.UpdateCardImageMaterial` (read from IL) clones the
+material, sets the shader, then calls `DisableKeyword("_ISTINY_ON")`. The mod replaces that
+path (`CollectionItemLoadArtPatch` → `CollectionCardMaterialCache.GetOrCreate`), and its
+clone kept the keyword.
+
+**Fix:** `GetOrCreate` makes the same call, using the game's constant
+`CardTinyShaderVariables.IsTinyKeyword` (`_ISTINY_ON`), so a rename fails at compile time.
+**Confirmed in game** by the user on 2026-11-06.
+
+**The same gap, left as is by the user's decision (2026-11-06):** that method also disables
+`_ISPREMIUM_ON` when `isPremium` is false. The browser always passes false
+(`NativeCardPreviewRuntime.cs:111`), the mod's `LoadArt` prefix ignores it, and **61
+materials ship with the keyword on**, so those cards can draw differently from stock.
+
+**What `_ISPREMIUM_ON` is: the Card Skin effect, not a new feature.** The game's tooltip
+(`CardSkins`, version 5.0.0): "Card Skins add premium animation to your in-game cards. Card
+Skins are automatically (and always) equipped." `GameData.db` lists 1241 `CardSkin`
+collectibles, with season ids from 2 up and `InStore` / `IsFoundInChests` flags.
+`ItemVisualsController.Setup` asks `CollectionManager.IsPremiumCardSkinEquipped` and
+`SetCardFrameMaterial` sets the keyword from the answer, on or off, so the baked value never
+decides it in a run. The 61 therefore look like assets saved with the toggle on, not a
+chosen set (inferred: they show no clean pattern in rarity, season or chest flags). The
+shader (`The Bazaar/PremiumCard`) is compiled, so the exact visual was not read from it.
+
+**Looked at and ruled out:**
+
+- 7 items whose material `_CRDSIZE_*` disagrees with their database size (Tiny Cutlass,
+  Bongos, Meat, Azakan Stew, Exoskeleton, Improvised Bludgeon, Snowmobile). No game assembly
+  outside the `System`/`Unity`/`Microsoft` families references that keyword, so the mod
+  does not diverge from stock there.
+- Shiny Fang's baked `_ENCHANTMENTSTATUS_PRISMATIC`: stock calls `ApplyEnchantment` only
+  when an enchantment is passed, so it is left in place either way.
+
+**Tooling:** `decompiled/` is absent on this machine. A ~30-line Mono.Cecil console tool
+(regex over member names and string literals, optional IL dump by method) answered this;
+it lived in the session scratchpad, like the §9 auditor.
+
 ## Traps (each cost real debugging time)
 
 1. **Trainer cards have an empty `Tags` array.** They ship as `"<name> (Level Up)"`
@@ -656,6 +672,11 @@ lives in a dependency bundle. Reading bundles works with the game running.
    showing only its outer edges. Check `m_Border` in the bundle first. Fix by drawing the
    texture when the sprite spans it — see §9.
 
+19. **A replaced game method takes its side effects with it.** `CollectionItemLoadArtPatch`
+   stands in for `CardPreviewItem.LoadArt`, so anything the game adds to that path
+   silently stops applying to the browser. When a card looks wrong but loads fine, diff
+   the replacement against the method's current IL first — see §10.
+
 ## Verification: no-network confirmed (2026-08-07)
 
 Ran a completed run on The Dragons with all six first-party hosts pointed at `127.0.0.1`
@@ -689,7 +710,12 @@ Restore the hosts file afterwards from `%USERPROFILE%\Documents\hosts.bak-bpp`.
 
 ## Open items
 
-### Next session (after 2026-11-04)
+### Next session (after 2026-11-06)
+
+- [x] Deploy and confirm the Tiny fix (§10) — confirmed by the user 2026-11-06.
+- [x] `_ISPREMIUM_ON` (§10) — the user chose to leave it as is on 2026-11-06.
+
+### From 2026-11-04
 
 - [x] Deploy and confirm card art in game — done 2026-11-04 (§9).
 - [x] Merchant portraits whole after the 9-slice fix — confirmed in game 2026-11-04 (§9).
@@ -737,6 +763,9 @@ Restore the hosts file afterwards from `%USERPROFILE%\Documents\hosts.bak-bpp`.
 
 ## Things deliberately not done
 
+- `_ISPREMIUM_ON` is not cleared on cached card materials, though stock previews clear it:
+  the 61 materials that ship with it on can draw the Card Skin effect in the browser. The
+  user's decision, 2026-11-06 (§10). The fix would be one line beside the Tiny one.
 - Not using the Tauri installer at all — no auto-update, no OBS overlay. BepInEx and the
   mod are installed by hand.
 - Not deleting unused feature code, only its registrations. Smaller diff, easier rebase.
